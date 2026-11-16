@@ -1,0 +1,72 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.AdminPanel.User.DeleteModel;
+@{
+    ViewData["Title"] = $"Delete user {Model.User.UserName}";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Admin Panel"), new BreadcrumbItem("Users", "/AdminPanel/User/Index"), new BreadcrumbItem($"Delete {Model.User.UserName}") })" />
+
+<form method="post">
+    <input type="hidden" asp-for="User.Id" />
+
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash-fill"></i> Delete User
+        </button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Cancel
+        </a>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger py-2" role="alert">
+            <div asp-validation-summary="ModelOnly"></div>
+        </div>
+    }
+
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+            Are you sure you want to delete the account <strong>@Model.User.UserName</strong>?
+            This action cannot be undone.
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white d-flex align-items-center py-2">
+            <i class="bi bi-person-fill me-2"></i>
+            <h6 class="mb-0">Delete User: @Model.User.UserName</h6>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-person me-1"></i>
+                    @Html.DisplayNameFor(model => model.User.UserName)
+                </dt>
+                <dd class="col-sm-9">
+                    @Html.DisplayFor(model => model.User.UserName)
+                </dd>
+
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-envelope me-1"></i>
+                    @Html.DisplayNameFor(model => model.User.Email)
+                </dt>
+                <dd class="col-sm-9">
+                    @Html.DisplayFor(model => model.User.Email)
+                </dd>
+
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-card-text me-1"></i>
+                    Name
+                </dt>
+                <dd class="col-sm-9">
+                    @{
+                        var fullName = $"{Model.User.FirstName} {Model.User.LastName}".Trim();
+                    }
+                    @(string.IsNullOrWhiteSpace(fullName) ? "--" : fullName)
+                </dd>
+            </dl>
+        </div>
+    </div>
+</form>

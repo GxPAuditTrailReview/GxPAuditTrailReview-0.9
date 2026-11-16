@@ -1,0 +1,39 @@
+<Solution>
+  <Folder Name="/.claude/">
+    <File Path=".claude/CLAUDE.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/" />
+  <Folder Name="/.claude/skills/create-path-to-new-version/">
+    <File Path=".claude/skills/create-path-to-new-version/skill.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/update-docs-release/">
+    <File Path=".claude/skills/update-docs/SKILL.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/update-docs-test/">
+    <File Path="Skill.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/update-docs-validation-package/">
+    <File Path=".claude/skills/update-docs-validation-package/SKILL.md" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="pipelines/pipeline-ci-build-unit-test-dev-ops.yml" />
+    <File Path="pipelines/pipeline-deploy-on-azure-cloud.yml" />
+    <File Path="pipelines/pipeline-ui-tests-external-env.yml" />
+    <File Path="docker/docker-compose.postgres.yml" />
+    <File Path="docker/docker-compose.sqlite.yml" />
+    <File Path="docker/docker-compose.yml" />
+    <File Path="LICENSE" />
+  </Folder>
+  <Project Path="AuditTrailReview.Console/AuditTrailReview.Console.csproj" Id="3471f168-999d-4be1-bbc6-7c33010377f5" />
+  <Project Path="AuditTrailReview.Database/AuditTrailReview.Database.csproj" Id="c4145014-e705-473d-a091-e38c276ce3aa" />
+  <Project Path="AuditTrailReview.Docs/AuditTrailReview.Docs.csproj" Id="6b7a3f08-fe06-4092-8580-e901a343ef17" />
+  <Project Path="AuditTrailReview.Engine/AuditTrailReview.Engine.csproj" Id="729be7ac-303a-4927-b360-de43d3419510" />
+  <Project Path="AuditTrailReview.IntegrationHub.API/AuditTrailReview.IntegrationHub.API.csproj" Id="e5ec6f3e-7674-47bc-af53-63243f20d382" />
+  <Project Path="AuditTrailReview.IntegrationHub.WorkerService/AuditTrailReview.IntegrationHub.WorkerService.csproj" Id="8176b06e-df84-492f-9ccf-3b0f3c58f1cb" />
+  <Project Path="AuditTrailReview.McpServer/AuditTrailReview.McpServer.csproj" Id="e24bed1b-a84d-4681-84fa-324ccf0917e2" />
+  <Project Path="AuditTrailReview.Model/AuditTrailReview.Model.csproj" />
+  <Project Path="AuditTrailReview.UIPlaywrightTest/AuditTrailReview.UIPlaywrightTest.csproj" Id="84392bd3-a1cf-4115-8506-c82abf82f2b9" />
+  <Project Path="AuditTrailReview.UISeleniumTest/AuditTrailReview.UISeleniumTest.csproj" Id="90ad5bc9-9359-4fd6-bb2d-ea32154417a0" />
+  <Project Path="AuditTrailReview.UnitTest/AuditTrailReview.UnitTest.csproj" Id="b524ecca-e7c4-4b9b-adbd-7f5f8da03f94" />
+  <Project Path="AuditTrailReview.WebApp/AuditTrailReview.WebApp.csproj" />
+</Solution>

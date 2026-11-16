@@ -1,0 +1,51 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Structured logging (Path to v1.0.md item 29, Console follow-up); see Program.cs.
+         Unlike the other three components, this project has no database reference today, so
+         this deliberately stays lean: no Serilog.Settings.Configuration (Program.cs builds the
+         pipeline directly in code; appsettings.json here is this app's own small ScanApi
+         config file, not a Serilog-shaped one) and no Serilog.Sinks.MSSqlServer (no SQL
+         connection string was introduced just for logging; see NFR-030's note that a
+         short-lived CLI invocation makes a weaker case for persisted logging than a
+         long-running service). Just console + a rolling local file. Versions below are
+         believed current but have NOT been restored/build-verified in this session (no dotnet
+         toolchain available here). -->
+    <PackageReference Include="Serilog" Version="4.4.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Per-instance configuration (Path to v1.0.md item 30's Console follow-up); see
+         Program.cs's ConfigFilePath/DevConfigFilePath/ConsoleConfig. This app is meant to be
+         dropped onto and run standalone from many different machines, so it carries its own
+         settings file next to the exe rather than relying on OS-level environment variables
+         (removed entirely in the Thirty-fourth follow-up; file-only now). Update (not Include)
+         since the SDK's default globs already pick these files up as plain None items; Update
+         just adds CopyToOutputDirectory so they actually land in bin/ alongside the built exe
+         (and, on publish, next to the published exe) rather than staying only in the project
+         folder. appsettings.json is auto-created with placeholder values on first run if
+         missing entirely (see EnsureConfigFileExists in Program.cs), so this committed copy is
+         a template/reference, not the only place it can come from.
+         appsettings.Development.json is the optional Development-only override layered on top
+         when DOTNET_ENVIRONMENT=Development; it is never auto-created and is gitignored
+         (**/appsettings.Development.json), so CopyToOutputDirectory here is a no-op on a
+         machine where the file doesn't exist; same as every other component's Development
+         file. -->
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,48 @@
+﻿@{
+    if (ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout !=  null)
+    {
+        Layout = parentLayout.ToString();
+    }
+    else
+    {
+        Layout = "/Areas/Identity/Pages/_Layout.cshtml";
+    }
+
+    var activePage = ViewData["ActivePage"] as string;
+    string? activePageLabel = activePage switch
+    {
+        "Index" => "Profile",
+        "Email" => "Email",
+        "ChangePassword" => "Password",
+        _ => null
+    };
+}
+
+<ol class="breadcrumb">
+    <li class="breadcrumb-item">Account</li>
+    @if (activePageLabel is null)
+    {
+        <li class="breadcrumb-item active">Change your account settings</li>
+    }
+    else
+    {
+        <li class="breadcrumb-item">Change your account settings</li>
+        <li class="breadcrumb-item active">@activePageLabel</li>
+    }
+</ol>
+<hr>
+
+<div>
+    <div class="row">
+        <div class="col-md-3">
+            <partial name="_ManageNav" />
+        </div>
+        <div class="col-md-9">
+            @RenderBody()
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @RenderSection("Scripts", required: false)
+}

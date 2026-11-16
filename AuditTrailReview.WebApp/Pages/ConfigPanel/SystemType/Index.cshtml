@@ -1,0 +1,136 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.ConfigPanel.SystemType.IndexModel
+
+@{
+    ViewData["Title"] = "System Types";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Config Panel"), new BreadcrumbItem("System Types") })" />
+
+<hr />
+
+<form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+    <div class="col-auto">
+        <a asp-page="Create" class="btn btn-primary">
+            <i class="bi bi-plus-square"></i> &nbsp; Create New
+        </a>
+    </div>
+    <div class="col-auto">
+        <a asp-page-handler="Export" class="btn btn-success">
+            📥 Export to Excel
+        </a>
+    </div>
+    <div class="col-sm-4 col-lg-3">
+        <input type="text" name="SearchTerm" value="@Model.SearchTerm" class="form-control"
+               placeholder="Search by system type name..." />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-search"></i> Search
+        </button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+    {
+        <div class="col-auto">
+            <a asp-page="./Index" class="btn btn-outline-secondary">Clear</a>
+        </div>
+    }
+</form>
+
+<div class="table-responsive">
+<table class="table table-bordered table-hover table-striped sortable">
+    <thead class="table-primary">
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.SystemTypeInfo[0].SystemType)
+            </th>
+            <th class="no-sort"></th> @*  to not sort the collumn *@
+        </tr>
+    </thead>
+    <tbody>
+@if (Model.SystemTypeInfo.Count == 0)
+{
+        <tr>
+            <td colspan="2" class="text-center text-muted py-4">
+                <i class="bi bi-inbox"></i>
+                @(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "No system types found." : $"No system types match \"{Model.SearchTerm}\".")
+            </td>
+        </tr>
+}
+@foreach (var item in Model.SystemTypeInfo) {
+        <tr>
+
+            <td>
+                @Html.DisplayFor(modelItem => item.SystemType)
+            </td>
+            <td>
+                    <div class="w-35 btn-group" role="group">
+                        <a asp-page="./Details" asp-route-id="@item.Id" class="btn btn-warning nx-2"
+                           data-bs-toggle="tooltip" title="View details">
+                            <i class="bi bi-eye"></i>
+                        </a>
+
+                        <a asp-page="./Edit" asp-route-id="@item.Id" class="btn btn-primary nx-2"
+                           data-bs-toggle="tooltip" title="Edit system type">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+
+                        <a asp-page="./Delete" asp-route-id="@item.Id" class="btn btn-danger nx-2"
+                           data-bs-toggle="tooltip" title="Delete system type">
+                            <i class="bi bi-trash-fill"></i>
+                        </a>
+                    </div>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="System type pages">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index" asp-route-PageNumber="@(Model.PageNumber - 1)" asp-route-SearchTerm="@Model.SearchTerm"
+                   aria-label="Previous" tabindex="@(Model.PageNumber <= 1 ? "-1" : null)">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            @foreach (var p in Model.PageNumbersToDisplay)
+            {
+                if (p is null)
+                {
+                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                }
+                else
+                {
+                    <li class="page-item @(p == Model.PageNumber ? "active" : "")">
+                        <a class="page-link" asp-page="./Index" asp-route-PageNumber="@p" asp-route-SearchTerm="@Model.SearchTerm">@p</a>
+                    </li>
+                }
+            }
+            <li class="page-item @(Model.PageNumber >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index" asp-route-PageNumber="@(Model.PageNumber + 1)" asp-route-SearchTerm="@Model.SearchTerm"
+                   aria-label="Next" tabindex="@(Model.PageNumber >= Model.TotalPages ? "-1" : null)">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <p class="text-center text-muted small">
+        Page @Model.PageNumber of @Model.TotalPages
+        (@Model.TotalCount total system type@(Model.TotalCount == 1 ? "" : "s")@(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "" : $" matching \"{Model.SearchTerm}\"")).
+    </p>
+}
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltipEls.forEach(function (el) {
+                new bootstrap.Tooltip(el);
+            });
+        });
+    </script>
+}

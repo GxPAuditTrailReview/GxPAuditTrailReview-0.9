@@ -1,0 +1,41 @@
+# Self-contained, no-SQL-Server-needed way to try the WebApp: a single container with an embedded
+# Sqlite database (schema created from the EF Core model at startup -- see appsettings.Sqlite.json
+# and Program.cs). This is a separate flavor from the supported SQL-Server-backed deployment
+# (ADR-0002/ADR-0004, Installation Manual.md/Technical Manual.md) -- not a replacement for it, and
+# not intended for real GxP use.
+#
+# Out of scope in this flavor: the Integration Hub API and Worker Service aren't included, so
+# ScanUploadJob Tier.Worker rows (uploads large enough to need the Worker Service's queue) will
+# just sit Queued with nothing to drain them. Use the full SQL Server-backed deployment for that.
+#
+# Usage:
+#   docker compose --project-directory . -f docker/docker-compose.sqlite.yml up --build
+#   Then open http://localhost:8080 and sign in with the SeedAccount credentials below.
+# Run from the repository root with --project-directory . so the build context (.), .env and
+# ./backups resolve against the root, e.g.: docker compose --project-directory . -f docker/<this file> up --build
+# `name:` keeps the project (and so the volume names) identical to when this file lived at the root.
+name: gxpaudittrail
+services:
+  webapp:
+    build:
+      context: .
+      dockerfile: AuditTrailReview.WebApp/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Sqlite
+      ASPNETCORE_URLS: http://+:8080
+      # Reverse proxy/tunnel whose X-Forwarded-For/-Proto the webapp may trust (CIDR, e.g. 172.16.0.0/12).
+      # Empty = loopback only. See AuditTrailReview.Docs/CICD/Run docker compose on VPS.md section 6.
+      ForwardedHeaders__KnownNetworks__0: ${TRUSTED_PROXY_NETWORK:-}
+      # First-login credentials, seeded once against an empty user table -- change these, or
+      # override via `docker compose --project-directory . -f docker/docker-compose.sqlite.yml run -e SeedAccount__Password=...`.
+      SeedAccount__Email: admin@example.com
+      SeedAccount__Password: Choose-A-Strong-Password1!
+      # Optional: OpenAI__ApiKey / SmtpSettings__* can be added here too -- both are optional in
+      # this flavor (manual upload works without AI analysis; SMTP only backs "Send Credentials").
+    ports:
+      - "8080:8080"
+    volumes:
+      - sqlite_data:/app/data
+
+volumes:
+  sqlite_data:

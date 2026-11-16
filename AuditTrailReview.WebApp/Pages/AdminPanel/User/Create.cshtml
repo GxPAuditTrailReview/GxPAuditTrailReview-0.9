@@ -1,0 +1,154 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.AdminPanel.User.CreateModel
+@{
+    ViewData["Title"] = "New User";
+}
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Admin Panel"), new BreadcrumbItem("Users", "/AdminPanel/User/Index"), new BreadcrumbItem("New user") })" />
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form method="post">
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+            <br />
+
+@*             <div class="form-group">
+                <label asp-for="User.UserName" class="control-label"></label>
+                <input asp-for="User.UserName" class="form-control" />
+                <span asp-validation-for="User.UserName" class="text-danger"></span>
+            </div> *@
+
+            <div class="form-group">
+                <label asp-for="User.FirstName" class="control-label"></label>
+                <input asp-for="User.FirstName" class="form-control" />
+                <span asp-validation-for="User.FirstName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="User.LastName" class="control-label"></label>
+                <input asp-for="User.LastName" class="form-control" />
+                <span asp-validation-for="User.LastName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="User.Email" class="control-label"></label>
+                <input asp-for="User.Email" class="form-control" />
+                <span asp-validation-for="User.Email" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="User.Password" class="control-label"></label>
+                <input asp-for="User.Password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="User.Password" class="text-danger"></span>
+                <!-- Live client-side feedback while typing -- see the "password-requirements" script below.
+                     Mirrors the server-side policy in Program.cs (IdentityOptions.Password); this is a
+                     convenience for the user, not a substitute for the server-side check. -->
+                <ul id="password-requirements" class="list-unstyled small mt-1 mb-0" aria-live="polite">
+                    <li data-rule="length" class="text-muted"><span class="mark">•</span> At least 8 characters</li>
+                    <li data-rule="digit" class="text-muted"><span class="mark">•</span> At least one digit</li>
+                    <li data-rule="lower" class="text-muted"><span class="mark">•</span> At least one lowercase letter</li>
+                    <li data-rule="upper" class="text-muted"><span class="mark">•</span> At least one uppercase letter</li>
+                    <li data-rule="special" class="text-muted"><span class="mark">•</span> At least one special character</li>
+                </ul>
+            </div>
+            <div class="form-group">
+                <label asp-for="User.ConfirmPassword" class="control-label"></label>
+                <input asp-for="User.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="User.ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="User.Role" class="control-label">Assign Role</label>
+                <select asp-for="User.Role" class="form-control">
+                    <option value="">Select Role</option>
+                    @foreach (var role in Model.Roles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </select>
+                <span asp-validation-for="User.Role" class="text-danger"></span>
+            </div>
+
+            <!-- Single validation summary, shown once at the bottom. ModelOnly (not All) because
+                 field-specific errors already appear next to their field via asp-validation-for above;
+                 this only needs to catch page-level errors such as Identity's "Passwords must have..."
+                 messages, which are added with an empty ModelState key. -->
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        (function () {
+            var passwordInput = document.getElementById('User_Password');
+            var list = document.getElementById('password-requirements');
+            if (!passwordInput || !list) return;
+
+            var rules = {
+                length:  function (v) { return v.length >= 8; },
+                digit:   function (v) { return /[0-9]/.test(v); },
+                lower:   function (v) { return /[a-z]/.test(v); },
+                upper:   function (v) { return /[A-Z]/.test(v); },
+                special: function (v) { return /[^a-zA-Z0-9]/.test(v); }
+            };
+
+            function update() {
+                var value = passwordInput.value;
+                var touched = value.length > 0;
+
+                Object.keys(rules).forEach(function (key) {
+                    var li = list.querySelector('[data-rule="' + key + '"]');
+                    if (!li) return;
+
+                    var mark = li.querySelector('.mark');
+                    var met = rules[key](value);
+
+                    li.classList.toggle('text-success', touched && met);
+                    li.classList.toggle('text-danger', touched && !met);
+                    li.classList.toggle('text-muted', !touched);
+
+                    if (mark) {
+                        mark.textContent = !touched ? '•' : (met ? '✓' : '✗');
+                    }
+                });
+            }
+
+            passwordInput.addEventListener('input', update);
+            update();
+        })();
+    </script>
+}
+
+
+
+
+
+@* <h2>Create User</h2>
+
+<form method="post">
+    <div class="form-group">
+        <label asp-for="User.UserName"></label>
+        <input asp-for="User.UserName" class="form-control" />
+        <span asp-validation-for="User.UserName" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="User.Email"></label>
+        <input asp-for="User.Email" type="email" class="form-control" />
+        <span asp-validation-for="User.Email" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="User.Password"></label>
+        <input asp-for="User.Password" type="password" class="form-control" />
+        <span asp-validation-for="User.Password" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-page="./Index" class="btn btn-secondary">Cancel</a>
+</form>
+ *@

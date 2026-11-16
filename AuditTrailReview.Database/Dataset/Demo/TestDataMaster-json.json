@@ -1,0 +1,41 @@
+[
+    {
+        "ID": 1,
+        "DateTime": "2026-03-01T14:27:00Z",
+        "UserName": "Adrian",
+        "Operation": "Create",
+        "ObjectType": "SystemATRAuditDto",
+        "Object": "SystemName",
+        "OldValue": "34 mg",
+        "NewValue": "34 mg",
+        "Reason": "Good reason 1",
+        "Other": "1",
+        "System": "fgh"
+    },
+    {
+        "ID": 2,
+        "DateTime": "2026-03-02T14:27:00Z",
+        "UserName": "j.kowalsky",
+        "Operation": "Edit",
+        "ObjectType": "SystemATRAuditDto",
+        "Object": "SystemPrefixID",
+        "OldValue": "ccc1",
+        "NewValue": "bbb2",
+        "Reason": "Good reason 2",
+        "Other": "2",
+        "System": "ss"
+    },
+    {
+        "ID": 3,
+        "DateTime": "2026-03-03T14:27:00Z",
+        "UserName": "system",
+        "Operation": "Delete",
+        "ObjectType": "SystemATRAuditDto",
+        "Object": "SystemPrefixID",
+        "OldValue": "ccc1",
+        "NewValue": "ccc3",
+        "Reason": "Good reason 3",
+        "Other": "3",
+        "System": "ss"
+    }
+]

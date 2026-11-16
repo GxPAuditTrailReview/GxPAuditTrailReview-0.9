@@ -1,0 +1,125 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.AdminPanel.User.EditModel
+@{
+    ViewData["Title"] = $"Edit user {Model.User.Email}";
+    var isOwnAccount = Model.IsOwnAccount;
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Admin Panel"), new BreadcrumbItem("Users", "/AdminPanel/User/Index"), new BreadcrumbItem($"Edit {Model.User.Email}") })" />
+
+<form method="post">
+    @* Input.UserId/UserName/Email are implicitly required (non-nullable reference types) but this
+       form only ever edits User.Email (the field actually written back in Edit.cshtml.cs's
+       OnPostAsync) -- these hidden fields carry the values OnGetAsync already copied onto Input
+       so real browser submissions satisfy that validation. Pre-existing gap: without them, every
+       save on this page failed ModelState validation with no visible per-field error (the
+       validation summary below is ModelOnly, and no asp-validation-for span exists for any of
+       these three fields), discovered while adding the Deactivate checkbox below. *@
+    <input type="hidden" asp-for="Input.UserId" />
+    <input type="hidden" asp-for="Input.UserName" />
+    <input type="hidden" asp-for="Input.Email" />
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Cancel
+        </a>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger py-2" role="alert">
+            <div asp-validation-summary="ModelOnly"></div>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-person-fill me-2"></i>
+            <h6 class="mb-0">Edit User: @Model.User.Email</h6>
+            @if (Model.Input.IsDeactivated)
+            {
+                <span class="badge bg-secondary ms-2">Inactive</span>
+            }
+            else
+            {
+                <span class="badge bg-success ms-2">Active</span>
+            }
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-4">
+                Update this account's details and role. Changes are recorded in the audit trail.
+            </p>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Input.FirstName" class="form-label fw-semibold"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input asp-for="Input.FirstName" class="form-control" />
+                    </div>
+                    <span asp-validation-for="Input.FirstName" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Input.LastName" class="form-label fw-semibold"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input asp-for="Input.LastName" class="form-control" />
+                    </div>
+                    <span asp-validation-for="Input.LastName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="User.Email" class="form-label fw-semibold">
+                        Email <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input asp-for="User.Email" type="email" class="form-control" />
+                    </div>
+                    <div class="form-text">Also used as this account's sign-in username.</div>
+                    <span asp-validation-for="User.Email" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-2">
+                    <label asp-for="Input.Role" class="form-label fw-semibold">Assign Role</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                        <select asp-for="Input.Role" asp-items="@(new SelectList(Model.Roles))" class="form-select">
+                            <option value="">Select Role</option>
+                        </select>
+                    </div>
+                    <span asp-validation-for="Input.Role" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mb-2">
+                    <div class="form-check">
+                        <input asp-for="Input.IsDeactivated" class="form-check-input" disabled="@isOwnAccount" />
+                        <input type="hidden" name="Input.IsDeactivated" value="false" />
+                        <label asp-for="Input.IsDeactivated" class="form-check-label fw-semibold"></label>
+                        <div class="form-text">
+                            @if (isOwnAccount)
+                            {
+                                <span>You cannot deactivate your own account.</span>
+                            }
+                            else
+                            {
+                                <span>While checked, this user will be unable to sign in until an administrator unchecks it.</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

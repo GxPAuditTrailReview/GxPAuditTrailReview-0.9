@@ -1,0 +1,54 @@
+trigger:
+- master
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  buildConfiguration: 'Release'
+  webProject: 'AuditTrailReview.WebApp/AuditTrailReview.WebApp.csproj'
+  webUrl: 'http://127.0.0.1:5059'
+
+steps:
+
+- task: UseDotNet@2
+  displayName: 'Use .NET 10 SDK'
+  inputs:
+    packageType: sdk
+    version: '10.0.x'
+
+- powershell: |
+    Get-Location
+    Get-ChildItem -Recurse -Filter *.csproj | Select-Object -ExpandProperty FullName
+  displayName: 'Debug: list projects'
+
+- script: dotnet restore
+  displayName: 'Restore'
+
+- script: dotnet build --configuration $(buildConfiguration) --no-restore
+  displayName: 'Build'
+
+- powershell: |
+    dotnet test AuditTrailReview.UnitTest/AuditTrailReview.UnitTest.csproj --configuration $(buildConfiguration) --no-build --logger trx --results-directory $(Agent.TempDirectory)/TestResults
+  displayName: 'Run unit tests'
+
+# --- UI/Selenium test stage -- intentionally disabled for v1.0 (Path to v1.0.md item 19) ---
+# AuditTrailReview.UISeleniumTest/WebAppFixture.cs already starts and stops its own WebApp
+# process per test run (dotnet run --launch-profile http), and AuditTrailReview.UISeleniumTest/
+# appsettings.json's defaults match AuditTrailReview.WebApp/appsettings.json's committed
+# SeedAccount, so no ATR_SEED_* / ATR_SELENIUM_* pipeline variables are required to run this
+# suite -- those env vars (see Config.cs) are only needed to override the committed defaults,
+# e.g. to target a different environment. The blocker for re-enabling this stage is that no CI
+# step yet provisions the LocalDB database this suite's WebApp instance needs (no EF migrations
+# exist -- see AuditTrailReview.Database/Database schema/'s numbered scripts); add that step,
+# then uncomment the step below.
+# - powershell: |
+#     dotnet test AuditTrailReview.UISeleniumTest/AuditTrailReview.UISeleniumTest.csproj --configuration $(buildConfiguration) --no-build --logger trx --results-directory $(Agent.TempDirectory)/TestResults
+#   displayName: 'Run Selenium tests'
+
+- task: PublishTestResults@2
+  displayName: 'Publish test results'
+  condition: always()
+  inputs:
+    testResultsFormat: VSTest
+    testResultsFiles: '$(Agent.TempDirectory)/TestResults/*.trx'

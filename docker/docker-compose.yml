@@ -1,0 +1,16 @@
+# Run from the repository root with --project-directory . so the build context (.), .env and
+# ./backups resolve against the root, e.g.: docker compose --project-directory . -f docker/<this file> up --build
+# `name:` keeps the project (and so the volume names) identical to when this file lived at the root.
+name: gxpaudittrail
+services:
+  connector:
+    build:
+      context: .
+      dockerfile: AuditTrailReview.IntegrationHub.WorkerService/Dockerfile
+    volumes:
+      - connector_watch:/watch
+    command: ["sh", "-c", "while :; do sleep 6h & wait $${!}; done"]
+    tty: true
+
+volumes:
+  connector_watch:

@@ -1,0 +1,109 @@
+@page
+@model AuditTrailReview.WebApp.Pages.Help.IndexModel
+@{
+    ViewData["Title"] = "Help";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Help") })" />
+<hr />
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center">
+        <i class="bi bi-life-preserver text-primary fs-3"></i>
+    </div>
+    <div>
+        <h4 class="mb-0 fw-semibold">Getting started with GxPAuditTrailReview</h4>
+        <small class="text-muted">A sample file to try, the full user manual, and video walkthroughs.</small>
+    </div>
+</div>
+
+<div class="row g-4">
+
+    <!-- Try it now: sample audit trail files -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-cloud-upload text-primary me-1"></i> Try it now</h5>
+                <p class="card-text text-muted">
+                    Not ready to upload a real audit trail export yet? Download one of the sample
+                    files below, each with the same 37 example records, and 29 of them have
+                    potential nonconformances. Don't be scared by that: it's by design, so your
+                    very first scan shows every one of our 19 built-in review rules firing at
+                    least once, not just one or two examples. Go to
+                    <a asp-page="/Scan/Scan">Scans &rarr; Upload</a> and upload one to see the
+                    scan, its findings, and the review workflow in action.
+                </p>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-filetype-csv me-2"></i>sample-audit-trail.csv</span>
+                        <a class="btn btn-sm btn-outline-primary" href="~/samples/sample-audit-trail.csv" download>
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-filetype-xml me-2"></i>sample-audit-trail.xml</span>
+                        <a class="btn btn-sm btn-outline-primary" href="~/samples/sample-audit-trail.xml" download>
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-filetype-json me-2"></i>sample-audit-trail.json</span>
+                        <a class="btn btn-sm btn-outline-primary" href="~/samples/sample-audit-trail.json" download>
+                            <i class="bi bi-download"></i> Download
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- User manual -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title"><i class="bi bi-book text-primary me-1"></i> User manual</h5>
+                <p class="card-text text-muted">
+                    Signing in, managing systems, uploading and reviewing scans, signing off, and
+                    using the configuration and administration screens, all covered in one
+                    place, written for reviewers, system owners, and administrators alike.
+                </p>
+                <a class="btn btn-primary mt-auto align-self-start" asp-page="/Help/UserManual">
+                    <i class="bi bi-book-half"></i> Open the user manual
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video tutorials (hosted on the GxPAuditTrailReview YouTube channel) -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title"><i class="bi bi-youtube text-primary me-1"></i> Video tutorials</h5>
+                <p class="card-text text-muted">
+                    Training walkthroughs from both the user and technical point of view are
+                    available on our YouTube channel.
+                </p>
+                <a class="btn btn-primary mt-auto align-self-start" href="https://www.youtube.com/@@GXPAuditTrailReview" target="_blank" rel="noopener noreferrer">
+                    <i class="bi bi-youtube"></i> Watch on YouTube
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ask a question (external support site) -->
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+                <h5 class="card-title"><i class="bi bi-chat-dots text-primary me-1"></i> Ask a question</h5>
+                <p class="card-text text-muted">
+                    Can't find what you're looking for in the user manual or video tutorials?
+                    Reach out to us on the GxPAuditTrailReview website.
+                </p>
+                <a class="btn btn-primary mt-auto align-self-start" href="https://gxpaudittrailreview.com/" target="_blank" rel="noopener noreferrer">
+                    <i class="bi bi-chat-dots"></i> Ask a question
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div>

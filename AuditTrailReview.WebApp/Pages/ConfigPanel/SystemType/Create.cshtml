@@ -1,0 +1,36 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.ConfigPanel.SystemType.CreateModel
+
+        @{
+        ViewData["Title"] = "New System Type";
+        }
+        
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Config Panel"), new BreadcrumbItem("System Types", "/ConfigPanel/SystemType/Index"), new BreadcrumbItem("New system type") })" />
+
+<hr />
+    <div class="row">
+    <div class="col-md-4">
+    <form method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+                <a asp-page="Index" class="btn btn-info">
+                    <i class="bi bi-back"></i> &nbsp; Back to List
+                </a>
+            </div>
+            <br />
+
+            <div class="form-group">
+                <label asp-for="SystemTypeInfo.SystemType" class="control-label"></label>
+                <input asp-for="SystemTypeInfo.SystemType" class="form-control" />
+                <span asp-validation-for="SystemTypeInfo.SystemType" class="text-danger"></span>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

@@ -1,0 +1,52 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.ConfigPanel.SystemType.EditModel
+
+@{
+    ViewData["Title"] = $"Edit system type {Model.SystemTypeInfo.SystemType}";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Config Panel"), new BreadcrumbItem("System Types", "/ConfigPanel/SystemType/Index"), new BreadcrumbItem($"Edit {Model.SystemTypeInfo.SystemType}") })" />
+
+<form method="post">
+    <input type="hidden" asp-for="SystemTypeInfo.Id" />
+
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger py-2" role="alert">
+            <div asp-validation-summary="ModelOnly"></div>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-tags me-2"></i>
+            <h6 class="mb-0">Edit System Type: @Model.SystemTypeInfo.SystemType</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label asp-for="SystemTypeInfo.SystemType" class="form-label fw-semibold"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-tags"></i></span>
+                        <input asp-for="SystemTypeInfo.SystemType" class="form-control" placeholder="e.g. ERP, MES, LIMS" />
+                    </div>
+                    <div class="form-text">A short label used to categorize systems for reporting.</div>
+                    <span asp-validation-for="SystemTypeInfo.SystemType" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

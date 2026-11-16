@@ -1,0 +1,55 @@
+﻿ID,DataTime,UserName,Operation,ObjectType,Object,OldValue,NewValue,Reason,Other,System,Checks
+1,2026-03-01T14:27:00Z,Adrian,Create,SystemATRAuditDto,SystemName,34 mg,34 mg,Good reason 1,1,fgh,D1 The username must not be a real personal name
+2,2026-03-02T14:27:00Z,j.kowalsky,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,Correct
+3,2026-03-03T14:27:00Z,j.smith,Delete,SystemATRAuditDto,SystemPrefixID,ccc1,ccc3,Good reason 3,3,ss,Correct
+4,2026-03-04T14:27:00Z,a.cole,Update,SystemATRAuditDto,SystemName,ddd1,ddd4,Good reason 4,4,dd,A1 - All records must have a unique identifier (UUID or system ID).
+4,2026-03-05T14:27:00Z,j.muller,Delete,SystemATRAuditDto,SystemPrefixID,ddd1,ddd4,Good reason 5,4,dd,A1 - All records must have a unique identifier (UUID or system ID).
+6,2026-03-06T14:27:00Z,j.metz,Update,SystemATRAuditDto,SystemPrefixID,ddd1,ddd4,Good reason 6,4,dd,Correct
+7,2026-03-08T14:27:00Z,h.hassen,Update,SystemATRAuditDto,SystemName,dddd,dddd,Good reason 63,4,dd,B1 Update must change the value (before ≠ after)
+8,2026-03-07T14:27:00Z,h.smith,Delete,SystemATRAuditDto,SystemPrefixID,fff,ff,Good reason 62,5,hdhd,C1Timestamps in logical order for each record.
+9,2026-03-09T14:27:00Z,a.cole,Update,SystemATRAuditDto,SystemPrefixID,gggg,dddd,Good reason 64,5,hdhd,Correct
+10,3/10/2026,a.cole,Update,SystemATRAuditDto,SystemName,hdhd,,Good reason 65,5,hdhd,"A2 Mandatory fields: user, timestamp, action must exist and must not be empty"
+11,2026-03-11T15:45:00+01:00,a.cole,Create,SystemATRAuditDto,SystemPrefixID,hdhd,d,Good reason 66,5,hdhd,"A3 Timestamp is not UTC , it is with time zone"
+12,3/12/2026,a.cole,Create,SystemATRAuditDto,SystemPrefixID,hdhd,ff,Good reason 67,5,hdhd,A3 Timestamp is not UTC
+13,2026-03-12T14:27:00Z,a.cole,Delete,SystemATRAuditDto,SystemName,gff,dddd,Good reason 68,5,hdhd,Correct
+14,2026-03-12T14:27:00Z,a.cole,Create,SystemATRAuditDto,SystemPrefixID,hdhd,dddd,Good reason 69,5,hdhd,"A4 No duplicate records (user, timestamp, operation, old value, new value)"
+15,2026-03-12T14:27:00Z,a.cole,Create,SystemATRAuditDto,SystemPrefixID,hdhd,dddd,Good reason 69,5,hdhd,"A4 No duplicate records (user, timestamp, operation, old value, new value)"
+16,2026-03-12T14:28:00Z,a.cole,Delete,SystemATRAuditDto,SystemName,hdhd1,dddd2,Good reason 67,5,hdhd,Correct
+17,2026-03-12T14:28:00Z,a.cole,Create,SystemATRAuditDto,SystemPrefixID,hdhd,dddd,3let,5,hdhd,"A5 No duplicate records (user, timestamp, operation, old value, new value)"
+18,2026-03-12T14:28:01Z,a.cole,Delete,SystemATRAuditDto,SystemPrefixID,gff,dddd,Good reason 68,5,hdhd,Correct
+19,2026-03-12T14:28:02Z,j.smith,Update,SystemATRAuditDto,SystemName,,,Good reason 3,3,ss,"B2 Update must have both values (before - old value, & after new value)"
+20,2026-03-12T14:28:03Z,j.kowalsky,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,Correct
+21,2026-03-12T14:28:04Z,j.smith,Create,SystemATRAuditDto,SystemPrefixID,,,Good reason 3,3,ss,B3 Create operation must have NewValue present
+22,2026-03-12T14:28:05Z,j.kowalsky,Edit,SystemATRAuditDto,SystemName,ccc1,bbb2,Good reason 2,2,ss,Correct
+23,2026-03-12T14:28:06Z,a.cole,Create,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,B4 Create action must not have the old value
+24,2026-03-12T14:28:08Z,j.kowalsky,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,Correct
+25,2026-03-12T14:28:09Z,j.smith,Create,SystemATRAuditDto,SystemName,,bbb2,,3,ss,B5 Create must have reason for creation
+26,2026-03-12T14:28:10Z,j.kowalsky,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,Correct
+27,2026-03-12T14:28:11Z,j.kowalsky,Update,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,,2,ss,B6 Update operation must have a reason for update
+28,2026-03-12T14:28:12Z,j.kowalsky,Edit,SystemATRAuditDto,SystemName,ccc1,bbb2,Good reason 2,2,ss,Correct
+29,2026-03-12T14:28:13Z,j.smith,Delete,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,,2,ss,B7 Delete must have reason for deletion
+30,2026-03-12T14:28:14Z,j.kowalsky,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,Correct
+31,2026-03-12T14:28:15Z,j.smith,Delete,SystemATRAuditDto,SystemName,,bbb2,Good reason 2,2,ss,B8 Delete must retain the  old value
+32,2026-03-12T14:28:16Z,j.smith,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,Correct
+33,2026-03-12T22:28:16Z,j.kowalsky,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,C3 Detect deviations from normal working hours (night/weekend changes)
+34,2026-03-13T14:28:17Z,a.cole,Edit,SystemATRAuditDto,SystemName,ccc1,bbb2,Good reason 2,2,ss,Correct
+35,16-03-2026 14:30:00,j.smith,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,A6 Timestamp in ISO 8601 compliant format
+36,2026-03-17T14:28:16Z,j.kowalsky,Edit,SystemATRAuditDto,SystemPrefixID,ccc12,bbb2h,Good reason 2,2,ss,Correct
+37,2026-03-17T14:29:16Z,j.smith,Edit,SystemATRAuditDto,SystemName,ccc1,bbb2,61234567,2,ss,A7 Reason must contain at least one alphabetic character
+38,2026-03-17T14:30:01Z,a.novak,Edit,SystemATRAuditDto,SystemPrefixID,ccc12,bbb2h,Good reason 2,2,ss,Correct
+39,2026-03-17T14:30:02Z,qw,Edit,SystemATRAuditDto,SystemPrefixID,ccc12,bbb2h,Good reason 2,2,ss,D2 User must contain at least 3 characters
+40,2026-03-17T14:30:03Z,a.cole,Edit,SystemATRAuditDto,SystemName,ccc14,bbb23,Good reason 2,2,ss,Correct
+41,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb2,Good reason 2,2,ss,E1 Mass changes in a short time
+42,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb23,Good reason 2,2,ss,E1 Mass changes in a short time
+43,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemName,ccc1,bbb24,Good reason 2,2,ss,E1 Mass changes in a short time
+44,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb25,Good reason 2,2,ss,E1 Mass changes in a short time
+45,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb26,Good reason 2,2,ss,E1 Mass changes in a short time
+46,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemName,ccc1,bbb27,Good reason 2,2,ss,E1 Mass changes in a short time
+47,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb28,Good reason 2,2,ss,E1 Mass changes in a short time
+48,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc1,bbb29,Good reason 2,2,ss,E1 Mass changes in a short time
+49,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemName,ccc1,bbb20,Good reason 2,2,ss,E1 Mass changes in a short time
+50,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc13,bbb2,Good reason 2,2,ss,E1 Mass changes in a short time
+51,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc14,bbb2,Good reason 2,2,ss,E1 Mass changes in a short time
+52,2026-03-17T15:30:16Z,a.cole,Edit,SystemATRAuditDto,SystemName,ccc15,bbb2,Good reason 2,2,ss,E1 Mass changes in a short time
+53,2026-03-17T15:30:18Z,a.cole,Edit,SystemATRAuditDto,SystemPrefixID,ccc16,bbb2,Good reason 2,2,ss,Correct
+54,2027-03-15T15:28:17Z,j.smith,Edit,SystemATRAuditDto,SystemPrefixID,ccc16,bbb2,Good reason 2,2,ss,C2 No timestamps in the future

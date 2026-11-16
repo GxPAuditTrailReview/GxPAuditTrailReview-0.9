@@ -1,0 +1,76 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>8fca5be9-f8c7-44bb-b308-162f8150ddff</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <!-- Pages/Help/UserManual.cshtml.cs reads this one file from this project's own "DocsCorpus"
+       output folder at runtime, rendering AuditTrailReview.Docs/Product/User manual.md as HTML.
+       (The other five documents previously copied here: Installation Manual, Technical
+       Manual, TechStack, Audit-Trail-Rule-Engine, PRD, were only ever read by the now-removed
+       documentation chatbot and its indexer, so they're no longer copied.) -->
+  <ItemGroup>
+    <Content Include="..\AuditTrailReview.Docs\Product\User manual.md" Link="DocsCorpus\Product\User manual.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="bootstrap" Version="5.3.8" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <!-- Renders Product/User manual.md as HTML for Pages/Help/UserManual; see
+         that page and the Content Include below. -->
+    <PackageReference Include="Markdig" Version="1.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <!-- Only used when Database:Provider=Sqlite/Postgres (see Program.cs and
+         appsettings.Sqlite.json/appsettings.Postgres.json): the self-contained, no-SQL-Server-
+         needed Docker flavors. The SQL Server path above remains the supported one for real GxP
+         use (ADR-0002/ADR-0004). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+
+    <!-- Structured, DB-only application logging (Path to v1.0.md item 29/27, Fortieth
+         follow-up); see Program.cs and appsettings.json's "Serilog" section. The local rolling
+         "Logs/apperror-*.log" file sink and Serilog.Sinks.File package were removed; events
+         now go to dbo.ApplicationLog only, matching the other two DB-backed components (see
+         AuditTrailReview.Console for the one component that still logs to a local file, since
+         it has no database connection to log to). Versions below are believed current but have
+         NOT been restored/build-verified in this session (no dotnet toolchain available here,
+         same caveat as every other change this session); let NuGet resolve/update to the
+         actual latest compatible versions on first restore. -->
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.1" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AuditTrailReview.Database\AuditTrailReview.Database.csproj" />
+    <ProjectReference Include="..\AuditTrailReview.Engine\AuditTrailReview.Engine.csproj" />
+    <ProjectReference Include="..\AuditTrailReview.Model\AuditTrailReview.Model.csproj" />
+  </ItemGroup>
+
+  <!-- Lets AuditTrailReview.UnitTest access this assembly's internal members via
+       reflection/dynamic: specifically, several Razor Page handlers (e.g.
+       Pages/Scan/Details.cshtml.cs's OnGetAiAnalysisAsync) return a JsonResult wrapping
+       an anonymous type. C# anonymous types are compiler-generated as `internal sealed`,
+       so a unit test in a different assembly that reads JsonResult.Value via `dynamic`
+       (there is no static type to cast to otherwise) fails at runtime with
+       RuntimeBinderException: "'object' does not contain a definition for '...'" unless
+       this assembly explicitly grants the test assembly internals access. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>AuditTrailReview.UnitTest</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

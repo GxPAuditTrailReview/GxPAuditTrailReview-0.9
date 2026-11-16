@@ -1,0 +1,178 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.ConfigPanel.SystemType.DetailsModel
+
+@{
+    ViewData["Title"] = $"System type {Model.SystemTypeInfo?.SystemType}";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Config Panel"), new BreadcrumbItem("System Types", "/ConfigPanel/SystemType/Index"), new BreadcrumbItem($"{Model.SystemTypeInfo?.SystemType}") })" />
+
+<div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+    <a asp-page="./Edit" asp-route-id="@Model.SystemTypeInfo?.Id" class="btn btn-primary">
+        <i class="bi bi-pencil-square"></i> Edit
+    </a>
+    <a asp-page="./Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="mt-2">
+    <!-- Tab navigation -->
+    <ul class="nav nav-tabs" id="systemTypeTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.ActiveTab == "overview" ? "active" : "")" id="overview-tab"
+                    data-bs-toggle="tab" data-bs-target="#overview"
+                    type="button" role="tab"
+                    aria-controls="overview" aria-selected="@(Model.ActiveTab == "overview" ? "true" : "false")">
+                Overview
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.ActiveTab == "audit-trail" ? "active" : "")" id="audit-trail-tab"
+                    data-bs-toggle="tab" data-bs-target="#audit-trail"
+                    type="button" role="tab"
+                    aria-controls="audit-trail" aria-selected="@(Model.ActiveTab == "audit-trail" ? "true" : "false")">
+                📜 Audit trail
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content border border-top-0 rounded-bottom p-3" id="systemTypeTabsContent">
+
+        <!-- Overview tab -->
+        <div class="tab-pane fade @(Model.ActiveTab == "overview" ? "show active" : "")" id="overview"
+             role="tabpanel" aria-labelledby="overview-tab">
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                    <i class="bi bi-tags me-2"></i>
+                    <h6 class="mb-0">System Type: @Model.SystemTypeInfo?.SystemType</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3 text-muted fw-semibold">
+                            <i class="bi bi-tags me-1"></i>
+                            @Html.DisplayNameFor(model => model.SystemTypeInfo.SystemType)
+                        </dt>
+                        <dd class="col-sm-9">
+                            @Html.DisplayFor(model => model.SystemTypeInfo.SystemType)
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit trail tab: the app's own change log (dbo.AuditTrail), filtered to this System
+             Type's SystemTypeID -- see DetailsModel.LoadAuditTrailAsync and ATR 0.27's migration
+             script remarks. Only entries logged after that column existed carry a SystemTypeID,
+             so a System Type edited before this feature shipped won't show its older history
+             here. -->
+        <div class="tab-pane fade @(Model.ActiveTab == "audit-trail" ? "show active" : "")" id="audit-trail"
+             role="tabpanel" aria-labelledby="audit-trail-tab">
+
+            <form method="get" asp-page="./Details" class="row g-2 align-items-center mb-3">
+                <input type="hidden" name="id" value="@Model.SystemTypeInfo?.Id" />
+                <input type="hidden" name="ActiveTab" value="audit-trail" />
+                <div class="col-sm-4 col-lg-3">
+                    <input type="text" name="AuditTrailSearchTerm" value="@Model.AuditTrailSearchTerm" class="form-control"
+                           placeholder="Search by user, operation, field, value, or reason..." />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AuditTrailSearchTerm))
+                {
+                    <div class="col-auto">
+                        <a asp-page="./Details" asp-route-id="@Model.SystemTypeInfo?.Id" asp-route-ActiveTab="audit-trail"
+                           class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                }
+            </form>
+
+            @if (Model.AuditTrailEntries.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped sortable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEntries[0].Timestamp)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEntries[0].UserID)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEntries[0].Operation)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEntries[0].Field)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEntries[0].OldValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEntries[0].NewValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEntries[0].Reason)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AuditTrailEntries)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+                @if (Model.AuditTrailTotalPages > 1)
+                {
+                    <nav aria-label="Audit trail pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.AuditTrailPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Details" asp-route-id="@Model.SystemTypeInfo?.Id"
+                                   asp-route-AuditTrailPage="@(Model.AuditTrailPage - 1)" asp-route-AuditTrailSearchTerm="@Model.AuditTrailSearchTerm"
+                                   asp-route-ActiveTab="audit-trail"
+                                   aria-label="Previous" tabindex="@(Model.AuditTrailPage <= 1 ? "-1" : null)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var p in Model.AuditTrailPageNumbers)
+                            {
+                                if (p is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(p == Model.AuditTrailPage ? "active" : "")">
+                                        <a class="page-link" asp-page="./Details" asp-route-id="@Model.SystemTypeInfo?.Id"
+                                           asp-route-AuditTrailPage="@p" asp-route-AuditTrailSearchTerm="@Model.AuditTrailSearchTerm"
+                                           asp-route-ActiveTab="audit-trail">@p</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(Model.AuditTrailPage >= Model.AuditTrailTotalPages ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Details" asp-route-id="@Model.SystemTypeInfo?.Id"
+                                   asp-route-AuditTrailPage="@(Model.AuditTrailPage + 1)" asp-route-AuditTrailSearchTerm="@Model.AuditTrailSearchTerm"
+                                   asp-route-ActiveTab="audit-trail"
+                                   aria-label="Next" tabindex="@(Model.AuditTrailPage >= Model.AuditTrailTotalPages ? "-1" : null)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Page @Model.AuditTrailPage of @Model.AuditTrailTotalPages
+                        (@Model.AuditTrailTotalCount total entr@(Model.AuditTrailTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailSearchTerm) ? "" : $" matching \"{Model.AuditTrailSearchTerm}\"")).
+                    </p>
+                }
+            }
+            else
+            {
+                <p class="text-muted mt-2">
+                    @(string.IsNullOrWhiteSpace(Model.AuditTrailSearchTerm) ? "No audit trail entries found for this system type." : $"No entries match \"{Model.AuditTrailSearchTerm}\".")
+                </p>
+            }
+        </div>
+    </div>
+</div>

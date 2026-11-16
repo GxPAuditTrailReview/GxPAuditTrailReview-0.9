@@ -1,0 +1,321 @@
+# Deploys one customer environment to Azure from nothing but a resource group name: creates the
+# group and all Azure resources (Bicep, deploy/infra), builds and pushes the four images, applies
+# the SQL schema scripts, then creates/updates the Container Apps. Run manually (trigger: none).
+# Separate from pipeline-ci-build-unit-test-dev-ops.yml, which stays the CI build + unit tests.
+#
+# One-time setup per Azure DevOps project (see deploy/README.md for the full walkthrough):
+#   - one Azure Resource Manager service connection whose identity has Owner (or Contributor +
+#     User Access Administrator) on the subscription, or on an existing, empty resource group.
+#     It creates role assignments (ACR push, Key Vault, managed identity), which Contributor
+#     alone cannot do.
+#   - an Azure DevOps Environment "atr-<resourceGroup>" (Pipelines > Environments, resource type
+#     None), created up front: it is NOT reliably auto-created, and the run fails with
+#     "Environment ... could not be found" without it. Optionally add an approval check; it gates
+#     every stage that changes Azure (Provision, Database, Rollout).
+#
+# Everything else is derived: resource names come from the resource group id (stable across
+# re-runs), secrets (encryption key shared by the four apps, initial admin password) are generated
+# once into Key Vault and never printed, and the apps reach Azure SQL with a managed identity
+# (Entra-only auth, no SQL password exists).
+#
+# Order matters: Provision (infra) -> Build (images need the ACR) -> Database (schema ahead of the
+# code) -> Rollout (apps created/updated with the new image tag). The scripts only add or drop
+# columns/tables the new code already expects, so during the short window the old revisions still
+# run, the previous version may see the new schema; keep that in mind for releases that drop
+# columns.
+
+trigger: none
+
+parameters:
+- name: resourceGroup
+  displayName: Resource group (created if missing; change it to deploy a second environment)
+  type: string
+  default: rg-gxpaudittrail
+- name: location
+  displayName: Azure region for the resources (pick one your subscription may use, e.g. northeurope, swedencentral)
+  type: string
+  default: polandcentral
+- name: azureSubscription
+  displayName: Azure Resource Manager service connection
+  type: string
+  default: atr-azure
+- name: adminEmail
+  displayName: E-mail of the initial WebApp admin account (password is generated into Key Vault)
+  type: string
+- name: imageTag
+  displayName: Image tag ("auto" = use the build id, which is new on every run)
+  type: string
+  default: auto
+- name: agentPool
+  displayName: Agent pool (keep "Azure Pipelines" for Microsoft-hosted ubuntu-latest, or type a self-hosted pool name)
+  type: string
+  default: Azure Pipelines
+- name: openSqlFirewall
+  displayName: Temporarily open the SQL firewall for the agent IP while the schema is applied
+  type: boolean
+  default: true
+- name: deployMcp
+  displayName: Deploy the MCP server
+  type: boolean
+  default: true
+- name: runSmokeTests
+  displayName: Run smoke tests after rollout
+  type: boolean
+  default: true
+
+variables:
+- name: tag
+  ${{ if or(eq(parameters.imageTag, ''), eq(parameters.imageTag, 'auto')) }}:
+    value: $(Build.BuildId)
+  ${{ else }}:
+    value: ${{ parameters.imageTag }}
+- name: rg
+  value: ${{ parameters.resourceGroup }}
+
+stages:
+
+- stage: Provision
+  displayName: Provision Azure resources
+  jobs:
+  - deployment: Infra
+    environment: atr-${{ parameters.resourceGroup }}
+    pool:
+      ${{ if eq(parameters.agentPool, 'Azure Pipelines') }}:
+        vmImage: ubuntu-latest
+      ${{ else }}:
+        name: ${{ parameters.agentPool }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: AzureCLI@2
+            displayName: Create resource group, deploy foundation, seed secrets
+            inputs:
+              azureSubscription: ${{ parameters.azureSubscription }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              workingDirectory: $(Build.SourcesDirectory)
+              inlineScript: |
+                set -euo pipefail
+
+                if [ "$(az group exists -n "$(rg)")" != "true" ]; then
+                  echo "Creating resource group $(rg) in ${{ parameters.location }}"
+                  az group create -n "$(rg)" -l "${{ parameters.location }}" -o none
+                fi
+
+                # Who is running? The access token carries the object id (oid), and idtyp=app for
+                # a service principal. This avoids needing any Microsoft Graph permission.
+                payload="$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv | cut -d. -f2 | tr '_-' '/+')"
+                while [ $(( ${#payload} % 4 )) -ne 0 ]; do payload="${payload}="; done
+                claims="$(echo "$payload" | base64 -d)"
+                oid="$(echo "$claims" | jq -r .oid)"
+                ptype="User"; [ "$(echo "$claims" | jq -r '.idtyp // empty')" = "app" ] && ptype="Application"
+                echo "Pipeline identity: $ptype"
+
+                az deployment group create -g "$(rg)" -n atr-foundation \
+                  --template-file deploy/infra/foundation.bicep \
+                  --parameters deployerObjectId="$oid" deployerPrincipalType="$ptype" \
+                    location="${{ parameters.location }}" \
+                  -o none
+                fout() { az deployment group show -g "$(rg)" -n atr-foundation --query "properties.outputs.$1.value" -o tsv; }
+                vault="$(fout keyVaultName)"
+
+                # Role assignments by NAME (the CLI resolves the built-in role ids). The pipeline
+                # identity needs AcrPush and Key Vault Secrets Officer; the apps' managed identity
+                # needs AcrPull and Key Vault Secrets User. Skipped when already present.
+                grant() {  # principal-object-id, principal-type, role, scope
+                  if [ -n "$(az role assignment list --assignee "$1" --role "$3" --scope "$4" --query '[0].id' -o tsv 2>/dev/null)" ]; then
+                    echo "Role $3 already assigned"; return 0
+                  fi
+                  for i in $(seq 1 10); do
+                    if az role assignment create --assignee-object-id "$1" --assignee-principal-type "$2" \
+                         --role "$3" --scope "$4" -o none; then echo "Granted $3"; return 0; fi
+                    echo "Retrying role $3 ($i/10)..."; sleep 15
+                  done
+                  echo "Could not assign role $3" >&2; return 1
+                }
+                grant "$oid" "$([ "$ptype" = "Application" ] && echo ServicePrincipal || echo User)" "AcrPush" "$(fout acrId)"
+                grant "$oid" "$([ "$ptype" = "Application" ] && echo ServicePrincipal || echo User)" "Key Vault Secrets Officer" "$(fout keyVaultId)"
+                grant "$(fout identityPrincipalId)" ServicePrincipal "AcrPull" "$(fout acrId)"
+                grant "$(fout identityPrincipalId)" ServicePrincipal "Key Vault Secrets User" "$(fout keyVaultId)"
+
+                # Seed secrets once; later runs keep them. The role assignment made above can take a
+                # few minutes to propagate, hence the retries.
+                seed() {  # name, value-generator
+                  for i in $(seq 1 20); do
+                    if az keyvault secret show --vault-name "$vault" -n "$1" -o none 2>/dev/null; then
+                      echo "Secret $1 already present"; return 0
+                    fi
+                    if az keyvault secret set --vault-name "$vault" -n "$1" --value "$($2)" -o none 2>/dev/null; then
+                      echo "Secret $1 created"; return 0
+                    fi
+                    echo "Waiting for Key Vault access ($i/20)..."; sleep 15
+                  done
+                  echo "Could not write secret $1 to $vault" >&2; return 1
+                }
+                gen_key() { openssl rand -base64 32; }
+                gen_pwd() { echo "$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-20)aA1!"; }
+                seed atr-encryption-key gen_key
+                seed atr-admin-password gen_pwd
+
+- stage: Build
+  displayName: Build and push images
+  dependsOn: Provision
+  jobs:
+  - job: Images
+    pool:
+      ${{ if eq(parameters.agentPool, 'Azure Pipelines') }}:
+        vmImage: ubuntu-latest
+      ${{ else }}:
+        name: ${{ parameters.agentPool }}
+    strategy:
+      matrix:
+        webapp:
+          repository: atr-webapp
+          dockerfile: AuditTrailReview.WebApp/Dockerfile
+        api:
+          repository: atr-api
+          dockerfile: AuditTrailReview.IntegrationHub.API/Dockerfile
+        worker:
+          repository: atr-worker
+          dockerfile: AuditTrailReview.IntegrationHub.WorkerService/Dockerfile
+        ${{ if eq(parameters.deployMcp, true) }}:
+          mcp:
+            repository: atr-mcp
+            dockerfile: AuditTrailReview.McpServer/Dockerfile
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      displayName: Build and push $(repository):$(tag)
+      inputs:
+        azureSubscription: ${{ parameters.azureSubscription }}
+        scriptType: bash
+        scriptLocation: inlineScript
+        workingDirectory: $(Build.SourcesDirectory)
+        inlineScript: |
+          set -euo pipefail
+          acr="$(az deployment group show -g "$(rg)" -n atr-foundation --query properties.outputs.acrName.value -o tsv)"
+          server="$(az acr show -n "$acr" --query loginServer -o tsv)"
+          az acr login -n "$acr"
+          docker build -f "$(dockerfile)" -t "$server/$(repository):$(tag)" .
+          docker push "$server/$(repository):$(tag)"
+
+- stage: Database
+  displayName: Apply SQL schema
+  dependsOn: Build
+  jobs:
+  - deployment: Schema
+    environment: atr-${{ parameters.resourceGroup }}
+    pool:
+      ${{ if eq(parameters.agentPool, 'Azure Pipelines') }}:
+        vmImage: ubuntu-latest
+      ${{ else }}:
+        name: ${{ parameters.agentPool }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: AzureCLI@2
+            displayName: Run snapshot (if empty), incremental SQL scripts and app DB user
+            inputs:
+              azureSubscription: ${{ parameters.azureSubscription }}
+              scriptType: pscore
+              scriptLocation: inlineScript
+              workingDirectory: $(Build.SourcesDirectory)
+              inlineScript: |
+                $o = (az deployment group show -g '$(rg)' -n atr-foundation --query properties.outputs -o json | ConvertFrom-Json)
+                $openFirewall = '${{ parameters.openSqlFirewall }}' -eq 'True'
+                ./deploy/Deploy-Database.ps1 `
+                  -SqlServerName $o.sqlServerName.value `
+                  -DatabaseName $o.sqlDatabaseName.value `
+                  -ResourceGroup '$(rg)' `
+                  -AppIdentityName $o.identityName.value `
+                  -AppIdentityClientId $o.identityClientId.value `
+                  -OpenFirewall:$openFirewall
+
+- stage: Rollout
+  displayName: Create / update Container Apps
+  dependsOn: Database
+  jobs:
+  - deployment: Apps
+    environment: atr-${{ parameters.resourceGroup }}
+    pool:
+      ${{ if eq(parameters.agentPool, 'Azure Pipelines') }}:
+        vmImage: ubuntu-latest
+      ${{ else }}:
+        name: ${{ parameters.agentPool }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          # apps.bicep orders the apps Worker -> API -> WebApp -> MCP: the worker must run the new
+          # code before the API accepts new-format jobs. The worker is pinned to one replica.
+          - task: AzureCLI@2
+            displayName: Deploy Container Apps $(tag)
+            inputs:
+              azureSubscription: ${{ parameters.azureSubscription }}
+              scriptType: bash
+              scriptLocation: inlineScript
+              workingDirectory: $(Build.SourcesDirectory)
+              inlineScript: |
+                set -euo pipefail
+                out() { az deployment group show -g "$(rg)" -n atr-foundation --query "properties.outputs.$1.value" -o tsv; }
+                deploy_mcp='${{ parameters.deployMcp }}'
+                az deployment group create -g "$(rg)" -n atr-apps \
+                  --template-file deploy/infra/apps.bicep \
+                  --parameters \
+                    location="$(out location)" \
+                    environmentName="$(out environmentName)" \
+                    identityId="$(out identityId)" \
+                    identityClientId="$(out identityClientId)" \
+                    acrLoginServer="$(out acrLoginServer)" \
+                    keyVaultUri="$(out keyVaultUri)" \
+                    sqlServerFqdn="$(out sqlServerFqdn)" \
+                    sqlDatabaseName="$(out sqlDatabaseName)" \
+                    imageTag="$(tag)" \
+                    deployMcp="$([ "$deploy_mcp" = "True" ] && echo true || echo false)" \
+                    adminEmail='${{ parameters.adminEmail }}' \
+                  -o none
+                echo "WebApp: https://$(az deployment group show -g "$(rg)" -n atr-apps --query properties.outputs.webFqdn.value -o tsv)"
+                echo "Initial admin password is in Key Vault $(out keyVaultName), secret atr-admin-password."
+
+          - ${{ if eq(parameters.runSmokeTests, true) }}:
+            - task: AzureCLI@2
+              displayName: Smoke tests
+              inputs:
+                azureSubscription: ${{ parameters.azureSubscription }}
+                scriptType: bash
+                scriptLocation: inlineScript
+                inlineScript: |
+                  set -euo pipefail
+                  deploy_mcp='${{ parameters.deployMcp }}'
+                  app() { az deployment group show -g "$(rg)" -n atr-apps --query "properties.outputs.$1.value" -o tsv; }
+                  code() { curl -s -o /dev/null -w '%{http_code}' --max-time 30 --retry 6 --retry-delay 10 --retry-all-errors "$@" || true; }
+
+                  # On any failure print each app's recent container logs, so the cause is in the
+                  # pipeline log instead of needing a trip to the portal.
+                  on_fail() {
+                    status=$?
+                    if [ $status -ne 0 ]; then
+                      for app in $(az containerapp list -g "$(rg)" --query '[].name' -o tsv); do
+                        echo "##[group]Logs of $app"
+                        az containerapp logs show -g "$(rg)" -n "$app" --type console --tail 60 --format text 2>&1 || true
+                        echo "##[endgroup]"
+                      done
+                    fi
+                  }
+                  trap on_fail EXIT
+
+                  web="$(app webFqdn)"
+                  echo "WebApp https://$web/"
+                  test "$(code -L "https://$web/")" = "200"
+
+                  if [ "$deploy_mcp" = "True" ]; then
+                    mcp="$(app mcpFqdn)"
+                    echo "MCP https://$mcp/health (200) and /mcp without key (401)"
+                    test "$(code "https://$mcp/health")" = "200"
+                    test "$(code -X POST "https://$mcp/mcp")" = "401"
+                  fi

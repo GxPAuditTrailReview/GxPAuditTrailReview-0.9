@@ -1,0 +1,71 @@
+@page
+@model AuditTrailReview.WebApp.Pages.Help.UserManualModel
+@{
+    ViewData["Title"] = "User Manual";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Help", "/Help/Index"), new BreadcrumbItem("User manual") })" />
+<hr />
+
+@if (Model.ManualMissing)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        The user manual couldn't be found on this server. If you just rebuilt the app, make sure
+        <code>AuditTrailReview.Docs/Product/User manual.md</code> is present and
+        that the project was rebuilt (not just re-run) so it gets copied into the output folder.
+    </div>
+}
+else
+{
+    <div class="markdown-body">
+        @Html.Raw(Model.ManualHtml)
+    </div>
+}
+
+<style>
+    .markdown-body {
+        max-width: 900px;
+    }
+
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+        margin-top: 1.75rem;
+        margin-bottom: 0.75rem;
+        font-weight: 600;
+    }
+
+    .markdown-body h1:first-child, .markdown-body h2:first-child {
+        margin-top: 0;
+    }
+
+    .markdown-body table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+
+    .markdown-body table th, .markdown-body table td {
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .markdown-body table th {
+        background-color: #f8f9fa;
+    }
+
+    .markdown-body code {
+        background-color: #f1f3f5;
+        padding: 0.1rem 0.35rem;
+        border-radius: 0.25rem;
+    }
+
+    .markdown-body blockquote {
+        border-left: 4px solid #dee2e6;
+        padding-left: 1rem;
+        color: #6c757d;
+    }
+
+    .markdown-body hr {
+        margin: 2rem 0;
+    }
+</style>

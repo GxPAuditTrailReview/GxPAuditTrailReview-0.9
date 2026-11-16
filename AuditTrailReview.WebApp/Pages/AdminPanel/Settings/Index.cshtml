@@ -1,0 +1,1988 @@
+@page
+@model AuditTrailReview.WebApp.Pages.AdminPanel.Settings.IndexModel
+@using AuditTrailReview.Model
+
+@{
+    ViewData["Title"] = "Application Settings";
+    var effectiveActiveTab = Model.ActiveTab ?? (
+        TempData.Peek("GeneralSuccess") != null ? "general" :
+        TempData.Peek("SecuritySuccess") != null ? "security" :
+        TempData.Peek("FtpSuccess") != null ? "ftp" :
+        TempData.Peek("AiSuccess") != null ? "ai" :
+        TempData.Peek("ApiSuccess") != null ? "api" :
+        TempData.Peek("McpSuccess") != null ? "mcp" :
+        "general");
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Admin Panel"), new BreadcrumbItem("Application Settings") })" />
+
+<div class="mb-3">
+    <a asp-page-handler="ExportAll" class="btn btn-success">
+        📥 Export to Excel
+    </a>
+</div>
+
+@if (TempData["SecuritySuccess"] != null)
+{
+    <div class="alert alert-success py-2" role="alert">@TempData["SecuritySuccess"]</div>
+}
+@if (TempData["GeneralSuccess"] != null)
+{
+    <div class="alert alert-success py-2" role="alert">@TempData["GeneralSuccess"]</div>
+}
+@if (TempData["FtpSuccess"] != null)
+{
+    <div class="alert alert-success py-2" role="alert">@TempData["FtpSuccess"]</div>
+}
+@if (TempData["AiSuccess"] != null)
+{
+    <div class="alert alert-success py-2" role="alert">@TempData["AiSuccess"]</div>
+}
+@if (TempData["ApiSuccess"] != null)
+{
+    <div class="alert alert-success py-2" role="alert">@TempData["ApiSuccess"]</div>
+}
+@if (TempData["McpSuccess"] != null)
+{
+    <div class="alert alert-success py-2" role="alert">@TempData["McpSuccess"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger py-2" role="alert">@TempData["Error"]</div>
+}
+
+<!-- Tab navigation -->
+<ul class="nav nav-tabs mb-3" id="settingsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "general" ? "active" : "")" id="general-tab" data-bs-toggle="tab"
+                data-bs-target="#general" type="button" role="tab"
+                aria-controls="general" aria-selected="@(effectiveActiveTab == "general" ? "true" : "false")">
+            <i class="bi bi-clock me-1"></i> General
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "security" ? "active" : "")" id="security-tab" data-bs-toggle="tab"
+                data-bs-target="#security" type="button" role="tab"
+                aria-controls="security" aria-selected="@(effectiveActiveTab == "security" ? "true" : "false")">
+            <i class="bi bi-shield-lock me-1"></i> Security
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "email" ? "active" : "")" id="email-tab" data-bs-toggle="tab"
+                data-bs-target="#email" type="button" role="tab"
+                aria-controls="email" aria-selected="@(effectiveActiveTab == "email" ? "true" : "false")">
+            <i class="bi bi-envelope me-1"></i> Email
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "ai" ? "active" : "")" id="ai-tab" data-bs-toggle="tab"
+                data-bs-target="#ai" type="button" role="tab"
+                aria-controls="ai" aria-selected="@(effectiveActiveTab == "ai" ? "true" : "false")">
+            <i class="bi bi-cpu me-1"></i> AI Analysis
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "api" ? "active" : "")" id="api-tab" data-bs-toggle="tab"
+                data-bs-target="#api" type="button" role="tab"
+                aria-controls="api" aria-selected="@(effectiveActiveTab == "api" ? "true" : "false")">
+            <i class="bi bi-key me-1"></i> API
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "mcp" ? "active" : "")" id="mcp-tab" data-bs-toggle="tab"
+                data-bs-target="#mcp" type="button" role="tab"
+                aria-controls="mcp" aria-selected="@(effectiveActiveTab == "mcp" ? "true" : "false")">
+            <i class="bi bi-key me-1"></i> MCP
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "ftp" ? "active" : "")" id="ftp-tab" data-bs-toggle="tab"
+                data-bs-target="#ftp" type="button" role="tab"
+                aria-controls="ftp" aria-selected="@(effectiveActiveTab == "ftp" ? "true" : "false")">
+            <i class="bi bi-hdd-network me-1"></i> FTP
+            @if (Model.FtpSettings.Enabled)
+            {
+                <span class="badge text-bg-success ms-1">ON</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(effectiveActiveTab == "audit-trail" ? "active" : "")" id="audit-trail-tab" data-bs-toggle="tab"
+                data-bs-target="#audit-trail" type="button" role="tab"
+                aria-controls="audit-trail" aria-selected="@(effectiveActiveTab == "audit-trail" ? "true" : "false")">
+            📜 Audit Trail
+            <span class="badge bg-primary ms-1">@(Model.AuditTrailSecurityTotalCount + Model.AuditTrailGeneralTotalCount + Model.AuditTrailEmailTotalCount + Model.AuditTrailAiTotalCount + Model.AuditTrailApiTotalCount + Model.AuditTrailMcpTotalCount)</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="settingsTabsContent">
+
+<!-- General tab -->
+<div class="tab-pane fade @(effectiveActiveTab == "general" ? "show active" : "")" id="general" role="tabpanel" aria-labelledby="general-tab">
+<form method="post" asp-page-handler="SaveGeneral">
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+    </div>
+
+    <div class="alert alert-info py-2" role="alert">
+        <i class="bi bi-info-circle me-1"></i>
+        Every date/time in the system is stored as UTC and displayed using the format and time
+        zone below. This is separate from the
+        <a asp-page="/ConfigPanel/RuleBasedReviewEngine">[C3] working-hours time zone</a>,
+        which only controls when a record counts as "out of hours" -- changing it here has no
+        effect on rule evaluation.
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-clock me-2"></i>
+            <h6 class="mb-0">Date &amp; Time Display</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="GeneralSettings.DateTimeFormat" class="form-label fw-semibold">Date/time format</label>
+                    <select asp-for="GeneralSettings.DateTimeFormat" class="form-select">
+                        @foreach (var option in Model.DateTimeFormatOptions)
+                        {
+                            <option value="@option.Format">@option.Example</option>
+                        }
+                    </select>
+                    <span asp-validation-for="GeneralSettings.DateTimeFormat" class="text-danger"></span>
+                    <div class="form-text">
+                        Applied to every date/time shown on screen or exported, system-wide.
+                        Currently: <strong>@Model.GeneralDateTimeExample</strong>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="GeneralSettings.DisplayTimeZone" class="form-label fw-semibold">Display time zone</label>
+                    <select asp-for="GeneralSettings.DisplayTimeZone" class="form-select">
+                        <option value="" selected="@(string.IsNullOrEmpty(Model.GeneralSettings.DisplayTimeZone) ? "selected" : null)">UTC (not configured)</option>
+                        @foreach (var tz in Model.DisplayTimeZoneIds)
+                        {
+                            <option value="@tz" selected="@(tz == Model.GeneralSettings.DisplayTimeZone ? "selected" : null)">@tz</option>
+                        }
+                    </select>
+                    <span asp-validation-for="GeneralSettings.DisplayTimeZone" class="text-danger"></span>
+                    <div class="form-text">Every stored UTC timestamp is converted into this time zone before display.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+
+<!-- Security tab -->
+<div class="tab-pane fade @(effectiveActiveTab == "security" ? "show active" : "")" id="security" role="tabpanel" aria-labelledby="security-tab">
+<form method="post" asp-page-handler="SaveSecurity">
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    <h6 class="mb-0">Security &ndash; Password Policy</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="SecuritySettings.PasswordRequiredLength" class="form-label fw-semibold"></label>
+                        <input asp-for="SecuritySettings.PasswordRequiredLength" class="form-control" style="max-width: 10rem;" />
+                        <span asp-validation-for="SecuritySettings.PasswordRequiredLength" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="SecuritySettings.PasswordRequiredUniqueChars" class="form-label fw-semibold"></label>
+                        <input asp-for="SecuritySettings.PasswordRequiredUniqueChars" class="form-control" style="max-width: 10rem;" />
+                        <span asp-validation-for="SecuritySettings.PasswordRequiredUniqueChars" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input asp-for="SecuritySettings.PasswordRequireDigit" class="form-check-input" role="switch" />
+                        <label asp-for="SecuritySettings.PasswordRequireDigit" class="form-check-label"></label>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input asp-for="SecuritySettings.PasswordRequireLowercase" class="form-check-input" role="switch" />
+                        <label asp-for="SecuritySettings.PasswordRequireLowercase" class="form-check-label"></label>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input asp-for="SecuritySettings.PasswordRequireUppercase" class="form-check-input" role="switch" />
+                        <label asp-for="SecuritySettings.PasswordRequireUppercase" class="form-check-label"></label>
+                    </div>
+
+                    <div class="form-check form-switch mb-0">
+                        <input asp-for="SecuritySettings.PasswordRequireNonAlphanumeric" class="form-check-input" role="switch" />
+                        <label asp-for="SecuritySettings.PasswordRequireNonAlphanumeric" class="form-check-label"></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    <h6 class="mb-0">Security &ndash; Account Lockout &amp; Sign-in</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="SecuritySettings.LockoutMaxFailedAccessAttempts" class="form-label fw-semibold"></label>
+                        <input asp-for="SecuritySettings.LockoutMaxFailedAccessAttempts" class="form-control" style="max-width: 10rem;" />
+                        <span asp-validation-for="SecuritySettings.LockoutMaxFailedAccessAttempts" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="SecuritySettings.LockoutDurationMinutes" class="form-label fw-semibold"></label>
+                        <input asp-for="SecuritySettings.LockoutDurationMinutes" class="form-control" style="max-width: 10rem;" />
+                        <span asp-validation-for="SecuritySettings.LockoutDurationMinutes" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-check form-switch mb-2">
+                        <input asp-for="SecuritySettings.LockoutAllowedForNewUsers" class="form-check-input" role="switch" />
+                        <label asp-for="SecuritySettings.LockoutAllowedForNewUsers" class="form-check-label"></label>
+                    </div>
+
+                    <div class="form-check form-switch mb-0">
+                        <input asp-for="SecuritySettings.RequireConfirmedAccount" class="form-check-input" role="switch" />
+                        <label asp-for="SecuritySettings.RequireConfirmedAccount" class="form-check-label"></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-xl-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                    <i class="bi bi-hourglass-split me-2"></i>
+                    <h6 class="mb-0">Security &ndash; Session Timeout</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="SecuritySettings.IdleTimeoutMinutes" class="form-label fw-semibold"></label>
+                        <input asp-for="SecuritySettings.IdleTimeoutMinutes" class="form-control" style="max-width: 10rem;" />
+                        <span asp-validation-for="SecuritySettings.IdleTimeoutMinutes" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="SecuritySettings.AbsoluteSessionHours" class="form-label fw-semibold"></label>
+                        <input asp-for="SecuritySettings.AbsoluteSessionHours" class="form-control" style="max-width: 10rem;" />
+                        <span asp-validation-for="SecuritySettings.AbsoluteSessionHours" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-0">
+                        <label asp-for="SecuritySettings.SessionWarningMinutes" class="form-label fw-semibold"></label>
+                        <input asp-for="SecuritySettings.SessionWarningMinutes" class="form-control" style="max-width: 10rem;" />
+                        <span asp-validation-for="SecuritySettings.SessionWarningMinutes" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+
+<!-- Email tab -->
+<div class="tab-pane fade @(effectiveActiveTab == "email" ? "show active" : "")" id="email" role="tabpanel" aria-labelledby="email-tab">
+<form method="post" asp-page-handler="SaveEmail">
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+        <button type="button" id="emailTestConnectionBtn" class="btn btn-outline-primary">
+            <i class="bi bi-plug"></i> Test connection
+        </button>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-key me-2"></i>
+            <h6 class="mb-0">SMTP Credentials</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="EmailSettings.UserName" class="form-label fw-semibold"></label>
+                    <input asp-for="EmailSettings.UserName" class="form-control" placeholder="Leave blank to use the server's own configuration" autocomplete="off" />
+                    <span asp-validation-for="EmailSettings.UserName" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="SmtpPasswordInput" class="form-label fw-semibold">SMTP password</label>
+                    <input asp-for="SmtpPasswordInput" type="password" class="form-control" placeholder="Leave blank to keep the current password" autocomplete="new-password" />
+                    <div class="form-check form-switch mt-2 d-flex align-items-center gap-2">
+                        <input asp-for="ClearSmtpPassword" class="form-check-input" role="switch" />
+                        <label asp-for="ClearSmtpPassword" class="form-check-label mb-0">Remove stored password</label>
+                        @if (Model.EmailPasswordConfigured)
+                        {
+                            <span class="badge text-bg-success">Password is present</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-secondary">No password saved</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-envelope me-2"></i>
+            <h6 class="mb-0">Email (SMTP)</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label asp-for="EmailSettings.Host" class="form-label fw-semibold"></label>
+                    <input asp-for="EmailSettings.Host" class="form-control" placeholder="smtp.example.com" />
+                    <span asp-validation-for="EmailSettings.Host" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="EmailSettings.Port" class="form-label fw-semibold"></label>
+                    <input asp-for="EmailSettings.Port" class="form-control" style="max-width: 10rem;" />
+                    <span asp-validation-for="EmailSettings.Port" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-8 mb-3">
+                    <label asp-for="EmailSettings.SenderEmail" class="form-label fw-semibold"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-at"></i></span>
+                        <input asp-for="EmailSettings.SenderEmail" class="form-control" placeholder="noreply@example.com" />
+                    </div>
+                    <span asp-validation-for="EmailSettings.SenderEmail" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="EmailSettings.SenderName" class="form-label fw-semibold"></label>
+                    <input asp-for="EmailSettings.SenderName" class="form-control" placeholder="AuditTrailReview" />
+                    <span asp-validation-for="EmailSettings.SenderName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-check form-switch mb-0">
+                <input asp-for="EmailSettings.EnableSsl" class="form-check-input" role="switch" />
+                <label asp-for="EmailSettings.EnableSsl" class="form-check-label"></label>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+
+<!-- FTP tab -->
+<div class="tab-pane fade @(effectiveActiveTab == "ftp" ? "show active" : "")" id="ftp" role="tabpanel" aria-labelledby="ftp-tab">
+<form method="post" asp-page-handler="SaveFtp">
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-power me-2"></i>
+            <h6 class="mb-0">FTP ingestion</h6>
+        </div>
+        <div class="card-body">
+            <div class="form-check form-switch mb-1">
+                <input asp-for="FtpSettings.Enabled" class="form-check-input" role="switch" id="ftpEnabled" />
+                <label asp-for="FtpSettings.Enabled" class="form-check-label fw-semibold"></label>
+            </div>
+            <div class="form-text">
+                Off by default. While off, the Worker Service does not connect to any FTP server
+                (queued upload jobs from the web app and API are still processed). Changes apply on the
+                Worker's next poll, no restart needed.
+            </div>
+        </div>
+    </div>
+
+    <fieldset id="ftpFields">
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                <i class="bi bi-hdd-network me-2"></i>
+                <h6 class="mb-0">Server and security</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label asp-for="FtpSettings.Host" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.Host" class="form-control" placeholder="ftp.example.com" autocomplete="off" />
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="FtpSettings.Port" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.Port" type="number" class="form-control" style="max-width: 10rem;" placeholder="default" />
+                        <div class="form-text">Blank = 21 (FTP/explicit FTPS) or 990 (implicit FTPS).</div>
+                        <span asp-validation-for="FtpSettings.Port" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FtpSettings.EncryptionMode" class="form-label fw-semibold"></label>
+                        <select asp-for="FtpSettings.EncryptionMode" asp-items="Model.FtpEncryptionModeOptions" class="form-select" id="ftpEncryptionMode"></select>
+                    </div>
+                    <div class="col-12 mb-3" id="ftpPlainWarning">
+                        <div class="alert alert-warning py-2 mb-0" role="alert">
+                            Plain FTP sends the username, password and audit trail files in clear text.
+                            Use FTPS wherever the server supports it.
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3 ftps-only">
+                        <div class="form-check form-switch mt-md-4">
+                            <input asp-for="FtpSettings.ValidateCertificate" class="form-check-input" role="switch" />
+                            <label asp-for="FtpSettings.ValidateCertificate" class="form-check-label"></label>
+                        </div>
+                        <div class="form-text">Turning this off encrypts the connection but does not verify the server's identity.</div>
+                    </div>
+                    <div class="col-md-6 mb-3 ftps-only">
+                        <label asp-for="FtpSettings.CertificateThumbprint" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.CertificateThumbprint" class="form-control" placeholder="Optional, for self-signed or internal-CA certificates" autocomplete="off" />
+                        <span asp-validation-for="FtpSettings.CertificateThumbprint" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                <i class="bi bi-key me-2"></i>
+                <h6 class="mb-0">Credentials</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FtpSettings.Username" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.Username" class="form-control" autocomplete="off" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FtpPasswordInput" class="form-label fw-semibold">FTP password</label>
+                        <input asp-for="FtpPasswordInput" type="password" class="form-control" placeholder="Leave blank to keep the current password" autocomplete="new-password" />
+                        <div class="form-check form-switch mt-2 d-flex align-items-center gap-2">
+                            <input asp-for="ClearFtpPassword" class="form-check-input" role="switch" />
+                            <label asp-for="ClearFtpPassword" class="form-check-label mb-0">Remove stored password</label>
+                            @if (Model.FtpPasswordConfigured)
+                            {
+                                <span class="badge text-bg-success">Password is present</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">No password saved</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+                <i class="bi bi-folder me-2"></i>
+                <h6 class="mb-0">Ingestion</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FtpSettings.SystemId" class="form-label fw-semibold"></label>
+                        <select asp-for="FtpSettings.SystemId" asp-items="Model.FtpSystemOptions" class="form-select">
+                            <option value="">-- select a system --</option>
+                        </select>
+                        <div class="form-text">One Worker Service instance ingests files for exactly one system.</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FtpSettings.RemoteFolder" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.RemoteFolder" class="form-control" placeholder="/GxPAuditTrail" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FtpSettings.ProcessedFolder" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.ProcessedFolder" class="form-control" />
+                        <div class="form-text">Relative to the remote folder. Blank = leave processed files in place.</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="FtpSettings.FailedFolder" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.FailedFolder" class="form-control" />
+                        <div class="form-text">Relative to the remote folder. Blank = leave permanently failed files in place.</div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="FtpSettings.PollingIntervalSeconds" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.PollingIntervalSeconds" type="number" class="form-control" />
+                        <span asp-validation-for="FtpSettings.PollingIntervalSeconds" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="FtpSettings.StaleUnmovedFileThresholdMinutes" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.StaleUnmovedFileThresholdMinutes" type="number" class="form-control" />
+                        <span asp-validation-for="FtpSettings.StaleUnmovedFileThresholdMinutes" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="FtpSettings.StaleFileCheckIntervalMinutes" class="form-label fw-semibold"></label>
+                        <input asp-for="FtpSettings.StaleFileCheckIntervalMinutes" type="number" class="form-control" />
+                        <span asp-validation-for="FtpSettings.StaleFileCheckIntervalMinutes" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </fieldset>
+</form>
+
+<script>
+    (function () {
+        var enabled = document.getElementById('ftpEnabled');
+        var fields = document.getElementById('ftpFields');
+        var mode = document.getElementById('ftpEncryptionMode');
+        var plainWarning = document.getElementById('ftpPlainWarning');
+        var ftpsOnly = document.querySelectorAll('#ftp .ftps-only');
+        if (!enabled || !fields || !mode) return;
+        function refresh() {
+            // Grey the fields out while the switch is off (not disabled: a disabled fieldset would not be
+            // posted, so the saved values would be lost).
+            fields.style.opacity = enabled.checked ? '1' : '0.55';
+            var plain = mode.value === '0';
+            plainWarning.style.display = plain ? '' : 'none';
+            ftpsOnly.forEach(function (el) { el.style.display = plain ? 'none' : ''; });
+        }
+        enabled.addEventListener('change', refresh);
+        mode.addEventListener('change', refresh);
+        refresh();
+    })();
+</script>
+</div>
+
+<!-- AI Analysis tab -->
+<div class="tab-pane fade @(effectiveActiveTab == "ai" ? "show active" : "")" id="ai" role="tabpanel" aria-labelledby="ai-tab">
+<form method="post" asp-page-handler="SaveAi">
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Save Changes
+        </button>
+        <button type="button" id="aiTestConnectionBtn" class="btn btn-outline-primary">
+            <i class="bi bi-plug"></i> Test connection
+        </button>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-robot me-2"></i>
+            <h6 class="mb-0">AI-Assisted Scan Review</h6>
+        </div>
+        <div class="card-body">
+            <div class="row mb-0 align-items-center">
+                <div class="col-md-5 col-form-label">
+                    Enable AI review for manually uploaded scans
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check form-switch mt-2">
+                        <input type="checkbox" id="AiAnalysisEnabled" name="AiAnalysisEnabled"
+                               value="true"
+                               class="form-check-input"
+                               checked="@Model.AiAnalysisEnabled" />
+                        <input type="hidden" name="AiAnalysisEnabled" value="false" />
+                        <label class="form-check-label" for="AiAnalysisEnabled">
+                            @(Model.AiAnalysisEnabled ? "Enabled" : "Disabled")
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-4 text-muted small">
+                    AI assistance to help judge the scan, as a supplementary opinion
+                    alongside the rule-based review, not a replacement for it.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-key me-2"></i>
+            <h6 class="mb-0">AI Provider &amp; Credentials</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="AiSettings.Provider" class="form-label fw-semibold">Provider</label>
+                    <select asp-for="AiSettings.Provider" asp-items="Model.AiProviderOptions" id="aiProviderSelect" class="form-select"></select>
+                    <span asp-validation-for="AiSettings.Provider" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="AiSettings.Model" class="form-label fw-semibold">Model</label>
+                    <select asp-for="AiSettings.Model" class="form-select">
+                        @foreach (var modelName in Model.AllowedAiModels)
+                        {
+                            <option value="@modelName">@modelName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="AiSettings.Model" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="ApiKeyInput" class="form-label fw-semibold">API key</label>
+                    <input asp-for="ApiKeyInput" type="password" class="form-control" placeholder="Leave blank to keep the current key" autocomplete="new-password" />
+                    <div class="form-check form-switch mt-2 d-flex align-items-center gap-2">
+                        <input asp-for="ClearApiKey" class="form-check-input" role="switch" />
+                        <label asp-for="ClearApiKey" class="form-check-label mb-0">Remove stored API key</label>
+                        @if (Model.AiConfigured)
+                        {
+                            <span class="badge text-bg-success">Key is present</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-secondary">No key saved</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-md-8 mb-3">
+                    <label asp-for="AiSettings.Endpoint" class="form-label fw-semibold">Endpoint</label>
+                    <input asp-for="AiSettings.Endpoint" id="aiEndpointInput" class="form-control" placeholder="https://api.openai.com" />
+                    <span asp-validation-for="AiSettings.Endpoint" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-cpu me-2"></i>
+            <h6 class="mb-0">AI Analysis</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label asp-for="AiSettings.Temperature" class="form-label fw-semibold"></label>
+                    <input asp-for="AiSettings.Temperature" type="number" step="0.1" min="0" max="2" class="form-control" />
+                    <span asp-validation-for="AiSettings.Temperature" class="text-danger"></span>
+                    <div class="form-text">0 = most consistent/deterministic, 2 = most varied. OpenAI's own default is 1.</div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="AiSettings.MaxOutputTokens" class="form-label fw-semibold"></label>
+                    <input asp-for="AiSettings.MaxOutputTokens" class="form-control" placeholder="No limit" />
+                    <span asp-validation-for="AiSettings.MaxOutputTokens" class="text-danger"></span>
+                    <div class="form-text">Leave blank for no limit (the model's own maximum applies).</div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="AiSettings.RequestTimeoutSeconds" class="form-label fw-semibold"></label>
+                    <input asp-for="AiSettings.RequestTimeoutSeconds" class="form-control" style="max-width: 10rem;" />
+                    <span asp-validation-for="AiSettings.RequestTimeoutSeconds" class="text-danger"></span>
+                    <div class="form-text">How long a scan's AI analysis call may run before it's abandoned.</div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="AiSettings.FullScanRowThreshold" class="form-label fw-semibold"></label>
+                    <input asp-for="AiSettings.FullScanRowThreshold" type="number" min="1" max="1000" class="form-control" style="max-width: 10rem;" />
+                    <span asp-validation-for="AiSettings.FullScanRowThreshold" class="text-danger"></span>
+                    <div class="form-text">Scans with this many rows or fewer get their entire result set analyzed. Larger scans fall back to a capped set of findings plus a summary of the whole scan.</div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label asp-for="AiSettings.MaxFindingsPerAnalysis" class="form-label fw-semibold"></label>
+                    <input asp-for="AiSettings.MaxFindingsPerAnalysis" type="number" min="1" max="1000" class="form-control" style="max-width: 10rem;" />
+                    <span asp-validation-for="AiSettings.MaxFindingsPerAnalysis" class="text-danger"></span>
+                    <div class="form-text">Used only for scans above the full-scan threshold: how many findings (not every row) are sent. Higher values give broader coverage but take longer and cost more.</div>
+                </div>
+
+                <div class="col-12 mb-0">
+                    <label asp-for="AiSettings.SystemMessage" class="form-label fw-semibold"></label>
+                    <textarea asp-for="AiSettings.SystemMessage" class="form-control font-monospace small" rows="4"></textarea>
+                    <span asp-validation-for="AiSettings.SystemMessage" class="text-danger"></span>
+                    <div class="form-text">Sets the AI's persona/expertise for every analysis. The rest of the prompt (rules checklist, response format) is fixed and shown below.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="card shadow-sm mb-4 mt-3">
+    <div class="card-header bg-dark text-white">
+        <strong>AI Prompt Template</strong>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">
+            The exact prompt sent to OpenAI for every scan's AI analysis, shown here
+            read-only for transparency. The placeholder below stands in for the scan's own
+            audit-trail data (as JSON), which is different for every scan and appended in
+            its place. This cannot currently be edited from this page.
+        </p>
+        <textarea class="form-control font-monospace small" rows="18" readonly
+                  aria-label="AI prompt template (read-only)">@Model.PromptTemplate</textarea>
+    </div>
+</div>
+</div>
+
+<!-- API tab: manages dbo.ApiKeyCredential, the keys AuditTrailReview.IntegrationHub.API's
+     X-Api-Key authentication validates (see ApiKeyAuthenticationHandler/ApiKeyCredentialValidator),
+     replacing the old static ApiKeyAuth:Keys config list. Unlike the other tabs, this isn't a
+     single-row settings form: it's a list of independently generated/revoked named keys. -->
+<div class="tab-pane fade @(effectiveActiveTab == "api" ? "show active" : "")" id="api" role="tabpanel" aria-labelledby="api-tab">
+
+    @if (!string.IsNullOrEmpty(Model.GeneratedApiKeyPlaintext))
+    {
+        <div class="alert alert-warning" role="alert">
+            <strong>API key "@Model.GeneratedApiKeyName" generated.</strong>
+            Copy it now -- it will not be shown again; only its encrypted form is stored.
+            <div class="input-group mt-2" style="max-width: 40rem;">
+                <input type="text" class="form-control font-monospace" id="generatedApiKeyValue"
+                       value="@Model.GeneratedApiKeyPlaintext" readonly
+                       onclick="this.select();" />
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('generatedApiKeyValue').value);">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
+            </div>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-plus-circle me-2"></i>
+            <h6 class="mb-0">Generate New Key</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="GenerateApiKey" class="row g-2 align-items-end">
+                <div class="col-sm-5 col-lg-4">
+                    <label asp-for="NewApiKeyName" class="form-label fw-semibold">Name</label>
+                    <input asp-for="NewApiKeyName" class="form-control" placeholder="e.g. the integration or caller this key is for" />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-key"></i> Generate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-list-ul me-2"></i>
+            <h6 class="mb-0">API Keys</h6>
+        </div>
+        <div class="card-body">
+            @if (Model.ApiKeys.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Name</th>
+                            <th>Created (UTC)</th>
+                            <th>Key</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in Model.ApiKeys)
+                        {
+                            <tr>
+                                <td>@key.Name</td>
+                                <td>@key.CreatedUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="font-monospace">&bull;&bull;&bull;&bull;@key.KeyHint</td>
+                                <td>
+                                    @if (key.RevokedUtc.HasValue)
+                                    {
+                                        <span class="badge text-bg-secondary">Revoked @key.RevokedUtc.Value.ToString("yyyy-MM-dd")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-success">Active</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!key.RevokedUtc.HasValue)
+                                    {
+                                        <form method="post" asp-page-handler="RevokeApiKey" asp-route-id="@key.Id"
+                                              onsubmit="return confirm('Revoke the API key \'@key.Name\'? Any caller still using it will immediately start getting 401 Unauthorized.');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-slash-circle"></i> Revoke
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">No API keys have been generated yet.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- MCP tab: manages dbo.McpApiKeyCredential, the keys AuditTrailReview.McpServer's
+     McpApiKeyMiddleware validates, replacing the old static McpAuth:Keys config list.
+     Deliberately a separate table/tab from "API" above -- a key generated here can never
+     authenticate IntegrationHub.API, and vice versa. Markup is otherwise identical to the API
+     tab's. -->
+<div class="tab-pane fade @(effectiveActiveTab == "mcp" ? "show active" : "")" id="mcp" role="tabpanel" aria-labelledby="mcp-tab">
+
+    @if (!string.IsNullOrEmpty(Model.GeneratedMcpApiKeyPlaintext))
+    {
+        <div class="alert alert-warning" role="alert">
+            <strong>MCP API key "@Model.GeneratedMcpApiKeyName" generated.</strong>
+            Copy it now -- it will not be shown again; only its encrypted form is stored.
+            <div class="input-group mt-2" style="max-width: 40rem;">
+                <input type="text" class="form-control font-monospace" id="generatedMcpApiKeyValue"
+                       value="@Model.GeneratedMcpApiKeyPlaintext" readonly
+                       onclick="this.select();" />
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('generatedMcpApiKeyValue').value);">
+                    <i class="bi bi-clipboard"></i> Copy
+                </button>
+            </div>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-plus-circle me-2"></i>
+            <h6 class="mb-0">Generate New Key</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-page-handler="GenerateMcpApiKey" class="row g-2 align-items-end">
+                <div class="col-sm-5 col-lg-4">
+                    <label asp-for="NewMcpApiKeyName" class="form-label fw-semibold">Name</label>
+                    <input asp-for="NewMcpApiKeyName" class="form-control" placeholder="e.g. the integration or caller this key is for" />
+                </div>
+                <div class="col-sm-4 col-lg-3">
+                    <label asp-for="NewMcpApiKeyUserId" class="form-label fw-semibold">Issued to user (optional)</label>
+                    <select asp-for="NewMcpApiKeyUserId" class="form-select">
+                        <option value="">(shared / service key)</option>
+                        @foreach (var u in Model.McpKeyUserNames)
+                        {
+                            <option value="@u.Key">@u.Value</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-key"></i> Generate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center py-2">
+            <i class="bi bi-list-ul me-2"></i>
+            <h6 class="mb-0">MCP Keys</h6>
+        </div>
+        <div class="card-body">
+            @if (Model.McpApiKeys.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Name</th>
+                            <th>User</th>
+                            <th>Created (UTC)</th>
+                            <th>Key</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in Model.McpApiKeys)
+                        {
+                            <tr>
+                                <td>@key.Name</td>
+                                <td>@(key.UserId != null && Model.McpKeyUserNames.TryGetValue(key.UserId, out var keyUser) ? keyUser : (key.UserId != null ? "(deleted user)" : "-"))</td>
+                                <td>@key.CreatedUtc.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td class="font-monospace">&bull;&bull;&bull;&bull;@key.KeyHint</td>
+                                <td>
+                                    @if (key.RevokedUtc.HasValue)
+                                    {
+                                        <span class="badge text-bg-secondary">Revoked @key.RevokedUtc.Value.ToString("yyyy-MM-dd")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-success">Active</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!key.RevokedUtc.HasValue)
+                                    {
+                                        <form method="post" asp-page-handler="RevokeMcpApiKey" asp-route-id="@key.Id"
+                                              onsubmit="return confirm('Revoke the MCP API key \'@key.Name\'? Any caller still using it will immediately start getting 401 Unauthorized.');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-slash-circle"></i> Revoke
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">No MCP API keys have been generated yet.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Audit Trail tab: the app's own change log (dbo.AuditTrail). Security/General/Email/AI/API/MCP
+     saves all log under AuditObjectType.ConfigPanel (as do ConfigPanel's own Rules/Engine
+     Settings/System Type), so each sub-tab below filters by its own Object value -- see
+     IndexModel.LoadAuditTrailAsync. The AI sub-tab also includes the AI-review toggle's own
+     history off the shared EngineSettings row (Object == "EngineSettings", Field ==
+     "AiAnalysisEnabled"), formerly AdminPanel/AIEnhancedReviewEngine's own Audit Trail tab. -->
+<div class="tab-pane fade @(effectiveActiveTab == "audit-trail" ? "show active" : "")" id="audit-trail" role="tabpanel" aria-labelledby="audit-trail-tab">
+
+    <ul class="nav nav-tabs mb-3" id="auditTrailSubTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.AuditTrailSubTab == "general" ? "active" : "")" id="audit-trail-general-tab" data-bs-toggle="tab"
+                    data-bs-target="#audit-trail-general" type="button" role="tab"
+                    aria-controls="audit-trail-general" aria-selected="@(Model.AuditTrailSubTab == "general" ? "true" : "false")">
+                <i class="bi bi-clock me-1"></i> General
+                <span class="badge bg-primary ms-1">@Model.AuditTrailGeneralTotalCount</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.AuditTrailSubTab == "security" ? "active" : "")" id="audit-trail-security-tab" data-bs-toggle="tab"
+                    data-bs-target="#audit-trail-security" type="button" role="tab"
+                    aria-controls="audit-trail-security" aria-selected="@(Model.AuditTrailSubTab == "security" ? "true" : "false")">
+                <i class="bi bi-shield-lock me-1"></i> Security
+                <span class="badge bg-primary ms-1">@Model.AuditTrailSecurityTotalCount</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.AuditTrailSubTab == "email" ? "active" : "")" id="audit-trail-email-tab" data-bs-toggle="tab"
+                    data-bs-target="#audit-trail-email" type="button" role="tab"
+                    aria-controls="audit-trail-email" aria-selected="@(Model.AuditTrailSubTab == "email" ? "true" : "false")">
+                <i class="bi bi-envelope me-1"></i> Email
+                <span class="badge bg-primary ms-1">@Model.AuditTrailEmailTotalCount</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.AuditTrailSubTab == "ai" ? "active" : "")" id="audit-trail-ai-tab" data-bs-toggle="tab"
+                    data-bs-target="#audit-trail-ai" type="button" role="tab"
+                    aria-controls="audit-trail-ai" aria-selected="@(Model.AuditTrailSubTab == "ai" ? "true" : "false")">
+                <i class="bi bi-cpu me-1"></i> AI Analysis
+                <span class="badge bg-primary ms-1">@Model.AuditTrailAiTotalCount</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.AuditTrailSubTab == "api" ? "active" : "")" id="audit-trail-api-tab" data-bs-toggle="tab"
+                    data-bs-target="#audit-trail-api" type="button" role="tab"
+                    aria-controls="audit-trail-api" aria-selected="@(Model.AuditTrailSubTab == "api" ? "true" : "false")">
+                <i class="bi bi-key me-1"></i> API
+                <span class="badge bg-primary ms-1">@Model.AuditTrailApiTotalCount</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(Model.AuditTrailSubTab == "mcp" ? "active" : "")" id="audit-trail-mcp-tab" data-bs-toggle="tab"
+                    data-bs-target="#audit-trail-mcp" type="button" role="tab"
+                    aria-controls="audit-trail-mcp" aria-selected="@(Model.AuditTrailSubTab == "mcp" ? "true" : "false")">
+                <i class="bi bi-key me-1"></i> MCP
+                <span class="badge bg-primary ms-1">@Model.AuditTrailMcpTotalCount</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="auditTrailSubTabsContent">
+
+        @{
+            // Hidden fields every sub-tab's search form carries so submitting it doesn't reset
+            // the other three sub-tabs' own page/search state -- same convention as
+            // RuleBasedReviewEngine.cshtml's two audit sub-tabs, extended to four.
+        }
+
+        <!-- General audit sub-tab -->
+        <div class="tab-pane fade @(Model.AuditTrailSubTab == "general" ? "show active" : "")" id="audit-trail-general" role="tabpanel" aria-labelledby="audit-trail-general-tab">
+
+            <form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+                <input type="hidden" name="ActiveTab" value="audit-trail" />
+                <input type="hidden" name="AuditTrailSubTab" value="general" />
+                <input type="hidden" name="AuditTrailSecurityPage" value="@Model.AuditTrailSecurityPage" />
+                <input type="hidden" name="AuditTrailSecuritySearchTerm" value="@Model.AuditTrailSecuritySearchTerm" />
+                <input type="hidden" name="AuditTrailEmailPage" value="@Model.AuditTrailEmailPage" />
+                <input type="hidden" name="AuditTrailEmailSearchTerm" value="@Model.AuditTrailEmailSearchTerm" />
+                <input type="hidden" name="AuditTrailAiPage" value="@Model.AuditTrailAiPage" />
+                <input type="hidden" name="AuditTrailAiSearchTerm" value="@Model.AuditTrailAiSearchTerm" />
+                <input type="hidden" name="AuditTrailApiPage" value="@Model.AuditTrailApiPage" />
+                <input type="hidden" name="AuditTrailApiSearchTerm" value="@Model.AuditTrailApiSearchTerm" />
+                <input type="hidden" name="AuditTrailMcpPage" value="@Model.AuditTrailMcpPage" />
+                <input type="hidden" name="AuditTrailMcpSearchTerm" value="@Model.AuditTrailMcpSearchTerm" />
+                <div class="col-sm-4 col-lg-3">
+                    <input type="text" name="AuditTrailGeneralSearchTerm" value="@Model.AuditTrailGeneralSearchTerm" class="form-control"
+                           placeholder="Search by user, operation, field, value, or reason..." />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AuditTrailGeneralSearchTerm))
+                {
+                    <div class="col-auto">
+                        <a asp-page="./Index" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="general"
+                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                           class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                }
+            </form>
+
+            @if (Model.AuditTrailGeneralEntries.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped sortable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailGeneralEntries[0].Timestamp)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailGeneralEntries[0].UserID)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailGeneralEntries[0].Operation)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailGeneralEntries[0].Field)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailGeneralEntries[0].OldValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailGeneralEntries[0].NewValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailGeneralEntries[0].Reason)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AuditTrailGeneralEntries)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+                @if (Model.AuditTrailGeneralTotalPages > 1)
+                {
+                    <nav aria-label="General audit trail pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.AuditTrailGeneralPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailGeneralPage="@(Model.AuditTrailGeneralPage - 1)" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="general"
+                                   aria-label="Previous" tabindex="@(Model.AuditTrailGeneralPage <= 1 ? "-1" : null)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var p in Model.AuditTrailGeneralPageNumbers)
+                            {
+                                if (p is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(p == Model.AuditTrailGeneralPage ? "active" : "")">
+                                        <a class="page-link" asp-page="./Index"
+                                           asp-route-AuditTrailGeneralPage="@p" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="general">@p</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(Model.AuditTrailGeneralPage >= Model.AuditTrailGeneralTotalPages ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailGeneralPage="@(Model.AuditTrailGeneralPage + 1)" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="general"
+                                   aria-label="Next" tabindex="@(Model.AuditTrailGeneralPage >= Model.AuditTrailGeneralTotalPages ? "-1" : null)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Page @Model.AuditTrailGeneralPage of @Model.AuditTrailGeneralTotalPages
+                        (@Model.AuditTrailGeneralTotalCount total entr@(Model.AuditTrailGeneralTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailGeneralSearchTerm) ? "" : $" matching \"{Model.AuditTrailGeneralSearchTerm}\"")).
+                    </p>
+                }
+            }
+            else
+            {
+                <p class="text-muted mt-2">
+                    @(string.IsNullOrWhiteSpace(Model.AuditTrailGeneralSearchTerm) ? "No audit trail entries found for general settings." : $"No entries match \"{Model.AuditTrailGeneralSearchTerm}\".")
+                </p>
+            }
+        </div>
+
+        <!-- Security audit sub-tab -->
+        <div class="tab-pane fade @(Model.AuditTrailSubTab == "security" ? "show active" : "")" id="audit-trail-security" role="tabpanel" aria-labelledby="audit-trail-security-tab">
+
+            <form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+                <input type="hidden" name="ActiveTab" value="audit-trail" />
+                <input type="hidden" name="AuditTrailSubTab" value="security" />
+                <input type="hidden" name="AuditTrailGeneralPage" value="@Model.AuditTrailGeneralPage" />
+                <input type="hidden" name="AuditTrailGeneralSearchTerm" value="@Model.AuditTrailGeneralSearchTerm" />
+                <input type="hidden" name="AuditTrailEmailPage" value="@Model.AuditTrailEmailPage" />
+                <input type="hidden" name="AuditTrailEmailSearchTerm" value="@Model.AuditTrailEmailSearchTerm" />
+                <input type="hidden" name="AuditTrailAiPage" value="@Model.AuditTrailAiPage" />
+                <input type="hidden" name="AuditTrailAiSearchTerm" value="@Model.AuditTrailAiSearchTerm" />
+                <input type="hidden" name="AuditTrailApiPage" value="@Model.AuditTrailApiPage" />
+                <input type="hidden" name="AuditTrailApiSearchTerm" value="@Model.AuditTrailApiSearchTerm" />
+                <input type="hidden" name="AuditTrailMcpPage" value="@Model.AuditTrailMcpPage" />
+                <input type="hidden" name="AuditTrailMcpSearchTerm" value="@Model.AuditTrailMcpSearchTerm" />
+                <div class="col-sm-4 col-lg-3">
+                    <input type="text" name="AuditTrailSecuritySearchTerm" value="@Model.AuditTrailSecuritySearchTerm" class="form-control"
+                           placeholder="Search by user, operation, field, value, or reason..." />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AuditTrailSecuritySearchTerm))
+                {
+                    <div class="col-auto">
+                        <a asp-page="./Index" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="security"
+                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                           class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                }
+            </form>
+
+            @if (Model.AuditTrailSecurityEntries.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped sortable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailSecurityEntries[0].Timestamp)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailSecurityEntries[0].UserID)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailSecurityEntries[0].Operation)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailSecurityEntries[0].Field)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailSecurityEntries[0].OldValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailSecurityEntries[0].NewValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailSecurityEntries[0].Reason)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AuditTrailSecurityEntries)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+                @if (Model.AuditTrailSecurityTotalPages > 1)
+                {
+                    <nav aria-label="Security audit trail pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.AuditTrailSecurityPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailSecurityPage="@(Model.AuditTrailSecurityPage - 1)" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="security"
+                                   aria-label="Previous" tabindex="@(Model.AuditTrailSecurityPage <= 1 ? "-1" : null)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var p in Model.AuditTrailSecurityPageNumbers)
+                            {
+                                if (p is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(p == Model.AuditTrailSecurityPage ? "active" : "")">
+                                        <a class="page-link" asp-page="./Index"
+                                           asp-route-AuditTrailSecurityPage="@p" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="security">@p</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(Model.AuditTrailSecurityPage >= Model.AuditTrailSecurityTotalPages ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailSecurityPage="@(Model.AuditTrailSecurityPage + 1)" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="security"
+                                   aria-label="Next" tabindex="@(Model.AuditTrailSecurityPage >= Model.AuditTrailSecurityTotalPages ? "-1" : null)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Page @Model.AuditTrailSecurityPage of @Model.AuditTrailSecurityTotalPages
+                        (@Model.AuditTrailSecurityTotalCount total entr@(Model.AuditTrailSecurityTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailSecuritySearchTerm) ? "" : $" matching \"{Model.AuditTrailSecuritySearchTerm}\"")).
+                    </p>
+                }
+            }
+            else
+            {
+                <p class="text-muted mt-2">
+                    @(string.IsNullOrWhiteSpace(Model.AuditTrailSecuritySearchTerm) ? "No audit trail entries found for security settings." : $"No entries match \"{Model.AuditTrailSecuritySearchTerm}\".")
+                </p>
+            }
+        </div>
+
+        <!-- Email audit sub-tab -->
+        <div class="tab-pane fade @(Model.AuditTrailSubTab == "email" ? "show active" : "")" id="audit-trail-email" role="tabpanel" aria-labelledby="audit-trail-email-tab">
+
+            <form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+                <input type="hidden" name="ActiveTab" value="audit-trail" />
+                <input type="hidden" name="AuditTrailSubTab" value="email" />
+                <input type="hidden" name="AuditTrailSecurityPage" value="@Model.AuditTrailSecurityPage" />
+                <input type="hidden" name="AuditTrailSecuritySearchTerm" value="@Model.AuditTrailSecuritySearchTerm" />
+                <input type="hidden" name="AuditTrailGeneralPage" value="@Model.AuditTrailGeneralPage" />
+                <input type="hidden" name="AuditTrailGeneralSearchTerm" value="@Model.AuditTrailGeneralSearchTerm" />
+                <input type="hidden" name="AuditTrailAiPage" value="@Model.AuditTrailAiPage" />
+                <input type="hidden" name="AuditTrailAiSearchTerm" value="@Model.AuditTrailAiSearchTerm" />
+                <input type="hidden" name="AuditTrailApiPage" value="@Model.AuditTrailApiPage" />
+                <input type="hidden" name="AuditTrailApiSearchTerm" value="@Model.AuditTrailApiSearchTerm" />
+                <input type="hidden" name="AuditTrailMcpPage" value="@Model.AuditTrailMcpPage" />
+                <input type="hidden" name="AuditTrailMcpSearchTerm" value="@Model.AuditTrailMcpSearchTerm" />
+                <div class="col-sm-4 col-lg-3">
+                    <input type="text" name="AuditTrailEmailSearchTerm" value="@Model.AuditTrailEmailSearchTerm" class="form-control"
+                           placeholder="Search by user, operation, field, value, or reason..." />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AuditTrailEmailSearchTerm))
+                {
+                    <div class="col-auto">
+                        <a asp-page="./Index" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="email"
+                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                           class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                }
+            </form>
+
+            @if (Model.AuditTrailEmailEntries.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped sortable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEmailEntries[0].Timestamp)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEmailEntries[0].UserID)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEmailEntries[0].Operation)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEmailEntries[0].Field)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEmailEntries[0].OldValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEmailEntries[0].NewValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailEmailEntries[0].Reason)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AuditTrailEmailEntries)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+                @if (Model.AuditTrailEmailTotalPages > 1)
+                {
+                    <nav aria-label="Email audit trail pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.AuditTrailEmailPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailEmailPage="@(Model.AuditTrailEmailPage - 1)" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="email"
+                                   aria-label="Previous" tabindex="@(Model.AuditTrailEmailPage <= 1 ? "-1" : null)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var p in Model.AuditTrailEmailPageNumbers)
+                            {
+                                if (p is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(p == Model.AuditTrailEmailPage ? "active" : "")">
+                                        <a class="page-link" asp-page="./Index"
+                                           asp-route-AuditTrailEmailPage="@p" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="email">@p</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(Model.AuditTrailEmailPage >= Model.AuditTrailEmailTotalPages ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailEmailPage="@(Model.AuditTrailEmailPage + 1)" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="email"
+                                   aria-label="Next" tabindex="@(Model.AuditTrailEmailPage >= Model.AuditTrailEmailTotalPages ? "-1" : null)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Page @Model.AuditTrailEmailPage of @Model.AuditTrailEmailTotalPages
+                        (@Model.AuditTrailEmailTotalCount total entr@(Model.AuditTrailEmailTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailEmailSearchTerm) ? "" : $" matching \"{Model.AuditTrailEmailSearchTerm}\"")).
+                    </p>
+                }
+            }
+            else
+            {
+                <p class="text-muted mt-2">
+                    @(string.IsNullOrWhiteSpace(Model.AuditTrailEmailSearchTerm) ? "No audit trail entries found for email settings." : $"No entries match \"{Model.AuditTrailEmailSearchTerm}\".")
+                </p>
+            }
+        </div>
+
+        <!-- AI Analysis audit sub-tab -->
+        <div class="tab-pane fade @(Model.AuditTrailSubTab == "ai" ? "show active" : "")" id="audit-trail-ai" role="tabpanel" aria-labelledby="audit-trail-ai-tab">
+
+            <form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+                <input type="hidden" name="ActiveTab" value="audit-trail" />
+                <input type="hidden" name="AuditTrailSubTab" value="ai" />
+                <input type="hidden" name="AuditTrailSecurityPage" value="@Model.AuditTrailSecurityPage" />
+                <input type="hidden" name="AuditTrailSecuritySearchTerm" value="@Model.AuditTrailSecuritySearchTerm" />
+                <input type="hidden" name="AuditTrailGeneralPage" value="@Model.AuditTrailGeneralPage" />
+                <input type="hidden" name="AuditTrailGeneralSearchTerm" value="@Model.AuditTrailGeneralSearchTerm" />
+                <input type="hidden" name="AuditTrailEmailPage" value="@Model.AuditTrailEmailPage" />
+                <input type="hidden" name="AuditTrailEmailSearchTerm" value="@Model.AuditTrailEmailSearchTerm" />
+                <input type="hidden" name="AuditTrailApiPage" value="@Model.AuditTrailApiPage" />
+                <input type="hidden" name="AuditTrailApiSearchTerm" value="@Model.AuditTrailApiSearchTerm" />
+                <input type="hidden" name="AuditTrailMcpPage" value="@Model.AuditTrailMcpPage" />
+                <input type="hidden" name="AuditTrailMcpSearchTerm" value="@Model.AuditTrailMcpSearchTerm" />
+                <div class="col-sm-4 col-lg-3">
+                    <input type="text" name="AuditTrailAiSearchTerm" value="@Model.AuditTrailAiSearchTerm" class="form-control"
+                           placeholder="Search by user, operation, field, value, or reason..." />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AuditTrailAiSearchTerm))
+                {
+                    <div class="col-auto">
+                        <a asp-page="./Index" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="ai"
+                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                           class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                }
+            </form>
+
+            @if (Model.AuditTrailAiEntries.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped sortable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailAiEntries[0].Timestamp)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailAiEntries[0].UserID)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailAiEntries[0].Operation)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailAiEntries[0].Field)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailAiEntries[0].OldValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailAiEntries[0].NewValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailAiEntries[0].Reason)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AuditTrailAiEntries)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+                @if (Model.AuditTrailAiTotalPages > 1)
+                {
+                    <nav aria-label="AI analysis audit trail pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.AuditTrailAiPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailAiPage="@(Model.AuditTrailAiPage - 1)" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="ai"
+                                   aria-label="Previous" tabindex="@(Model.AuditTrailAiPage <= 1 ? "-1" : null)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var p in Model.AuditTrailAiPageNumbers)
+                            {
+                                if (p is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(p == Model.AuditTrailAiPage ? "active" : "")">
+                                        <a class="page-link" asp-page="./Index"
+                                           asp-route-AuditTrailAiPage="@p" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="ai">@p</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(Model.AuditTrailAiPage >= Model.AuditTrailAiTotalPages ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailAiPage="@(Model.AuditTrailAiPage + 1)" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="ai"
+                                   aria-label="Next" tabindex="@(Model.AuditTrailAiPage >= Model.AuditTrailAiTotalPages ? "-1" : null)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Page @Model.AuditTrailAiPage of @Model.AuditTrailAiTotalPages
+                        (@Model.AuditTrailAiTotalCount total entr@(Model.AuditTrailAiTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailAiSearchTerm) ? "" : $" matching \"{Model.AuditTrailAiSearchTerm}\"")).
+                    </p>
+                }
+            }
+            else
+            {
+                <p class="text-muted mt-2">
+                    @(string.IsNullOrWhiteSpace(Model.AuditTrailAiSearchTerm) ? "No audit trail entries found for AI settings." : $"No entries match \"{Model.AuditTrailAiSearchTerm}\".")
+                </p>
+            }
+        </div>
+
+        <!-- API audit sub-tab -->
+        <div class="tab-pane fade @(Model.AuditTrailSubTab == "api" ? "show active" : "")" id="audit-trail-api" role="tabpanel" aria-labelledby="audit-trail-api-tab">
+
+            <form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+                <input type="hidden" name="ActiveTab" value="audit-trail" />
+                <input type="hidden" name="AuditTrailSubTab" value="api" />
+                <input type="hidden" name="AuditTrailSecurityPage" value="@Model.AuditTrailSecurityPage" />
+                <input type="hidden" name="AuditTrailSecuritySearchTerm" value="@Model.AuditTrailSecuritySearchTerm" />
+                <input type="hidden" name="AuditTrailGeneralPage" value="@Model.AuditTrailGeneralPage" />
+                <input type="hidden" name="AuditTrailGeneralSearchTerm" value="@Model.AuditTrailGeneralSearchTerm" />
+                <input type="hidden" name="AuditTrailEmailPage" value="@Model.AuditTrailEmailPage" />
+                <input type="hidden" name="AuditTrailEmailSearchTerm" value="@Model.AuditTrailEmailSearchTerm" />
+                <input type="hidden" name="AuditTrailAiPage" value="@Model.AuditTrailAiPage" />
+                <input type="hidden" name="AuditTrailAiSearchTerm" value="@Model.AuditTrailAiSearchTerm" />
+                <input type="hidden" name="AuditTrailMcpPage" value="@Model.AuditTrailMcpPage" />
+                <input type="hidden" name="AuditTrailMcpSearchTerm" value="@Model.AuditTrailMcpSearchTerm" />
+                <div class="col-sm-4 col-lg-3">
+                    <input type="text" name="AuditTrailApiSearchTerm" value="@Model.AuditTrailApiSearchTerm" class="form-control"
+                           placeholder="Search by user, operation, field, value, or reason..." />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AuditTrailApiSearchTerm))
+                {
+                    <div class="col-auto">
+                        <a asp-page="./Index" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="api"
+                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                           class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                }
+            </form>
+
+            @if (Model.AuditTrailApiEntries.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped sortable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailApiEntries[0].Timestamp)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailApiEntries[0].UserID)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailApiEntries[0].Operation)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailApiEntries[0].Field)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailApiEntries[0].OldValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailApiEntries[0].NewValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailApiEntries[0].Reason)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AuditTrailApiEntries)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+                @if (Model.AuditTrailApiTotalPages > 1)
+                {
+                    <nav aria-label="API audit trail pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.AuditTrailApiPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailApiPage="@(Model.AuditTrailApiPage - 1)" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="api"
+                                   aria-label="Previous" tabindex="@(Model.AuditTrailApiPage <= 1 ? "-1" : null)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var p in Model.AuditTrailApiPageNumbers)
+                            {
+                                if (p is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(p == Model.AuditTrailApiPage ? "active" : "")">
+                                        <a class="page-link" asp-page="./Index"
+                                           asp-route-AuditTrailApiPage="@p" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                           asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="api">@p</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(Model.AuditTrailApiPage >= Model.AuditTrailApiTotalPages ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailApiPage="@(Model.AuditTrailApiPage + 1)" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailMcpPage="@Model.AuditTrailMcpPage" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="api"
+                                   aria-label="Next" tabindex="@(Model.AuditTrailApiPage >= Model.AuditTrailApiTotalPages ? "-1" : null)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Page @Model.AuditTrailApiPage of @Model.AuditTrailApiTotalPages
+                        (@Model.AuditTrailApiTotalCount total entr@(Model.AuditTrailApiTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailApiSearchTerm) ? "" : $" matching \"{Model.AuditTrailApiSearchTerm}\"")).
+                    </p>
+                }
+            }
+            else
+            {
+                <p class="text-muted mt-2">
+                    @(string.IsNullOrWhiteSpace(Model.AuditTrailApiSearchTerm) ? "No audit trail entries found for API keys." : $"No entries match \"{Model.AuditTrailApiSearchTerm}\".")
+                </p>
+            }
+        </div>
+
+        <!-- MCP audit sub-tab -->
+        <div class="tab-pane fade @(Model.AuditTrailSubTab == "mcp" ? "show active" : "")" id="audit-trail-mcp" role="tabpanel" aria-labelledby="audit-trail-mcp-tab">
+
+            <form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+                <input type="hidden" name="ActiveTab" value="audit-trail" />
+                <input type="hidden" name="AuditTrailSubTab" value="mcp" />
+                <input type="hidden" name="AuditTrailSecurityPage" value="@Model.AuditTrailSecurityPage" />
+                <input type="hidden" name="AuditTrailSecuritySearchTerm" value="@Model.AuditTrailSecuritySearchTerm" />
+                <input type="hidden" name="AuditTrailGeneralPage" value="@Model.AuditTrailGeneralPage" />
+                <input type="hidden" name="AuditTrailGeneralSearchTerm" value="@Model.AuditTrailGeneralSearchTerm" />
+                <input type="hidden" name="AuditTrailEmailPage" value="@Model.AuditTrailEmailPage" />
+                <input type="hidden" name="AuditTrailEmailSearchTerm" value="@Model.AuditTrailEmailSearchTerm" />
+                <input type="hidden" name="AuditTrailAiPage" value="@Model.AuditTrailAiPage" />
+                <input type="hidden" name="AuditTrailAiSearchTerm" value="@Model.AuditTrailAiSearchTerm" />
+                <input type="hidden" name="AuditTrailApiPage" value="@Model.AuditTrailApiPage" />
+                <input type="hidden" name="AuditTrailApiSearchTerm" value="@Model.AuditTrailApiSearchTerm" />
+                <div class="col-sm-4 col-lg-3">
+                    <input type="text" name="AuditTrailMcpSearchTerm" value="@Model.AuditTrailMcpSearchTerm" class="form-control"
+                           placeholder="Search by user, operation, field, value, or reason..." />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.AuditTrailMcpSearchTerm))
+                {
+                    <div class="col-auto">
+                        <a asp-page="./Index" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="mcp"
+                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                           class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                }
+            </form>
+
+            @if (Model.AuditTrailMcpEntries.Any())
+            {
+                <div class="table-responsive">
+                <table class="table table-bordered table-hover table-striped sortable">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailMcpEntries[0].Timestamp)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailMcpEntries[0].UserID)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailMcpEntries[0].Operation)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailMcpEntries[0].Field)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailMcpEntries[0].OldValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailMcpEntries[0].NewValue)</th>
+                            <th>@Html.DisplayNameFor(model => model.AuditTrailMcpEntries[0].Reason)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.AuditTrailMcpEntries)
+                        {
+                            <tr>
+                                <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                </div>
+
+                @if (Model.AuditTrailMcpTotalPages > 1)
+                {
+                    <nav aria-label="MCP audit trail pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(Model.AuditTrailMcpPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailMcpPage="@(Model.AuditTrailMcpPage - 1)" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="mcp"
+                                   aria-label="Previous" tabindex="@(Model.AuditTrailMcpPage <= 1 ? "-1" : null)">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            </li>
+                            @foreach (var p in Model.AuditTrailMcpPageNumbers)
+                            {
+                                if (p is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item @(p == Model.AuditTrailMcpPage ? "active" : "")">
+                                        <a class="page-link" asp-page="./Index"
+                                           asp-route-AuditTrailMcpPage="@p" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                           asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                           asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                           asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                           asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                           asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="mcp">@p</a>
+                                    </li>
+                                }
+                            }
+                            <li class="page-item @(Model.AuditTrailMcpPage >= Model.AuditTrailMcpTotalPages ? "disabled" : "")">
+                                <a class="page-link" asp-page="./Index"
+                                   asp-route-AuditTrailMcpPage="@(Model.AuditTrailMcpPage + 1)" asp-route-AuditTrailMcpSearchTerm="@Model.AuditTrailMcpSearchTerm"
+                                   asp-route-AuditTrailSecurityPage="@Model.AuditTrailSecurityPage" asp-route-AuditTrailSecuritySearchTerm="@Model.AuditTrailSecuritySearchTerm"
+                                   asp-route-AuditTrailGeneralPage="@Model.AuditTrailGeneralPage" asp-route-AuditTrailGeneralSearchTerm="@Model.AuditTrailGeneralSearchTerm"
+                                   asp-route-AuditTrailEmailPage="@Model.AuditTrailEmailPage" asp-route-AuditTrailEmailSearchTerm="@Model.AuditTrailEmailSearchTerm"
+                                   asp-route-AuditTrailAiPage="@Model.AuditTrailAiPage" asp-route-AuditTrailAiSearchTerm="@Model.AuditTrailAiSearchTerm"
+                                   asp-route-AuditTrailApiPage="@Model.AuditTrailApiPage" asp-route-AuditTrailApiSearchTerm="@Model.AuditTrailApiSearchTerm"
+                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="mcp"
+                                   aria-label="Next" tabindex="@(Model.AuditTrailMcpPage >= Model.AuditTrailMcpTotalPages ? "-1" : null)">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Page @Model.AuditTrailMcpPage of @Model.AuditTrailMcpTotalPages
+                        (@Model.AuditTrailMcpTotalCount total entr@(Model.AuditTrailMcpTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailMcpSearchTerm) ? "" : $" matching \"{Model.AuditTrailMcpSearchTerm}\"")).
+                    </p>
+                }
+            }
+            else
+            {
+                <p class="text-muted mt-2">
+                    @(string.IsNullOrWhiteSpace(Model.AuditTrailMcpSearchTerm) ? "No audit trail entries found for MCP keys." : $"No entries match \"{Model.AuditTrailMcpSearchTerm}\".")
+                </p>
+            }
+        </div>
+
+    </div>
+</div>
+
+</div>
+
+<!-- AI Analysis tab's "Test connection" result -- populated by fetch, not a submitted form. -->
+<div class="modal fade" id="aiTestConnectionModal" tabindex="-1" aria-labelledby="aiTestConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="aiTestConnectionModalLabel">Test connection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="aiTestConnectionResult"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email tab's "Test connection" result -- same fetch-based, no-DB-write pattern as the AI tab's. -->
+<div class="modal fade" id="emailTestConnectionModal" tabindex="-1" aria-labelledby="emailTestConnectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailTestConnectionModalLabel">Test connection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="emailTestConnectionResult"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        // Endpoint's placeholder hints at the expected shape for the selected provider --
+        // AiSettings.Validate (server-side) is the actual source of truth for what's required;
+        // this is display only. Switching to OpenAI also prefills Endpoint with its default
+        // host (rather than just showing it as a placeholder) so an admin isn't left to guess
+        // the exact value, but only when the field is still empty -- a deliberately-set custom
+        // endpoint (e.g. a proxy/gateway) is never overwritten.
+        (function () {
+            var providerSelect = document.getElementById('aiProviderSelect');
+            var endpointInput = document.getElementById('aiEndpointInput');
+            if (!providerSelect || !endpointInput) return;
+
+            var openAiDefaultEndpoint = 'https://api.openai.com';
+
+            function toggle() {
+                var isOpenAi = providerSelect.value === '0';
+                endpointInput.placeholder = isOpenAi
+                    ? openAiDefaultEndpoint
+                    : 'https://my-resource.openai.azure.com/openai/v1';
+
+                if (isOpenAi && !endpointInput.value) {
+                    endpointInput.value = openAiDefaultEndpoint;
+                }
+            }
+
+            providerSelect.addEventListener('change', toggle);
+            toggle();
+        })();
+
+        // "Test connection" posts the AI tab's CURRENT (possibly unsaved) field values to
+        // OnPostTestAiConnectionAsync via fetch -- nothing is saved, the page doesn't navigate,
+        // and the result (success or a readable error from OpenAIService.TestConnectionAsync)
+        // is shown in the aiTestConnectionModal above rather than a full-page alert.
+        (function () {
+            var testButton = document.getElementById('aiTestConnectionBtn');
+            var modalElement = document.getElementById('aiTestConnectionModal');
+            var resultContainer = document.getElementById('aiTestConnectionResult');
+            if (!testButton || !modalElement || !resultContainer) return;
+
+            var form = testButton.closest('form');
+            var modal = new bootstrap.Modal(modalElement);
+
+            function renderResult(isSuccess, message) {
+                var alertClass = isSuccess ? 'alert-success' : 'alert-danger';
+                var icon = isSuccess ? 'bi-check-circle' : 'bi-exclamation-triangle';
+                var text = document.createElement('div');
+                text.textContent = message || (isSuccess ? 'Connection successful.' : 'The test failed.');
+                resultContainer.innerHTML = '<div class="alert ' + alertClass + ' mb-0 d-flex align-items-start gap-2"><i class="bi ' + icon + '"></i><div>' + text.innerHTML + '</div></div>';
+            }
+
+            testButton.addEventListener('click', async function () {
+                if (!form) return;
+
+                testButton.disabled = true;
+                resultContainer.innerHTML = '<div class="d-flex align-items-center gap-2 text-muted"><div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div> Testing connection...</div>';
+                modal.show();
+
+                try {
+                    var response = await fetch('@Url.Page(null, "TestAiConnection")', {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!response.ok) {
+                        renderResult(false, 'The test request itself failed (HTTP ' + response.status + ').');
+                        return;
+                    }
+
+                    var data = await response.json();
+                    renderResult(!!data.success, data.message);
+                } catch (err) {
+                    renderResult(false, 'Could not reach the server to run the test.');
+                } finally {
+                    testButton.disabled = false;
+                }
+            });
+        })();
+
+        // Email tab's "Test connection" -- identical pattern to the AI tab's above, posting to
+        // OnPostTestEmailConnectionAsync instead, which sends one real test email using this
+        // form's current (possibly unsaved) field values.
+        (function () {
+            var testButton = document.getElementById('emailTestConnectionBtn');
+            var modalElement = document.getElementById('emailTestConnectionModal');
+            var resultContainer = document.getElementById('emailTestConnectionResult');
+            if (!testButton || !modalElement || !resultContainer) return;
+
+            var form = testButton.closest('form');
+            var modal = new bootstrap.Modal(modalElement);
+
+            function renderResult(isSuccess, message) {
+                var alertClass = isSuccess ? 'alert-success' : 'alert-danger';
+                var icon = isSuccess ? 'bi-check-circle' : 'bi-exclamation-triangle';
+                var text = document.createElement('div');
+                text.textContent = message || (isSuccess ? 'Connection successful.' : 'The test failed.');
+                resultContainer.innerHTML = '<div class="alert ' + alertClass + ' mb-0 d-flex align-items-start gap-2"><i class="bi ' + icon + '"></i><div>' + text.innerHTML + '</div></div>';
+            }
+
+            testButton.addEventListener('click', async function () {
+                if (!form) return;
+
+                testButton.disabled = true;
+                resultContainer.innerHTML = '<div class="d-flex align-items-center gap-2 text-muted"><div class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div> Sending a test email...</div>';
+                modal.show();
+
+                try {
+                    var response = await fetch('@Url.Page(null, "TestEmailConnection")', {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+
+                    if (!response.ok) {
+                        renderResult(false, 'The test request itself failed (HTTP ' + response.status + ').');
+                        return;
+                    }
+
+                    var data = await response.json();
+                    renderResult(!!data.success, data.message);
+                } catch (err) {
+                    renderResult(false, 'Could not reach the server to run the test.');
+                } finally {
+                    testButton.disabled = false;
+                }
+            });
+        })();
+    </script>
+}

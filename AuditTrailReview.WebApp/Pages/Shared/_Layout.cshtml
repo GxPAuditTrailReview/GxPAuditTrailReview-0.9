@@ -1,0 +1,273 @@
+@using Microsoft.AspNetCore.Identity
+@using AuditTrailReview.Database
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuditTrailReview.WebApp.Services.SecurityOptionsState SecurityOptionsState
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    // Current Razor Page path (e.g. "/Scan/Details") drives the active-section highlight in the top menu.
+    var currentPage = ViewContext.RouteData.Values["page"] as string ?? "";
+    bool InSection(string prefix) => currentPage.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+        || currentPage.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase);
+    string NavCls(string prefix, string baseCls = "nav-link text-dark") => InSection(prefix) ? baseCls + " active" : baseCls;
+    string Cur(string prefix) => InSection(prefix) ? "page" : null;
+}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" /> @* do not index this page in search engines *@
+    <title>@(ViewData["Title"] is string pageTitle && pageTitle.Length > 0 ? pageTitle + " - " : "")GxPAuditTrailReview</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/AuditTrailReview.WebApp.styles.css" asp-append-version="true" />
+    
+    @* Add bootstrap icons *@
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+
+    <link rel="icon" href="~/images/GxPAuditTrail-icon.png" type="image/png">
+
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <meta name="request-verification-token" content="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+    }
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-toggleable-lg navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                   @if (SignInManager.IsSignedIn(User))
+                    {
+                        <a class="navbar-brand" asp-area="" asp-page="/Dashboard/Index">
+                        <img src="~/images/GxPAuditTrail-icon.png" alt="Logo" style="height: 24px;" class="me-2">GxPAuditTrailReview</a>                
+                    }   
+                    else
+                    {
+                    <a class="navbar-brand" asp-area="" asp-page="/Identity/Account/Login">
+                        <img src="~/images/GxPAuditTrail-icon.png" alt="Logo" style="height: 24px;" class="me-2">GxPAuditTrailReview</a>              
+                    }
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+
+
+                <div class="navbar-collapse collapse d-lg-inline-flex justify-content-between">
+                    @if (SignInManager.IsSignedIn(User))
+                        {
+                            <ul class="navbar-nav flex-grow-1">
+                                <li class="nav-item">
+                                            <a class="@NavCls("/Dashboard")" aria-current="@Cur("/Dashboard")" asp-area="" asp-page="/Dashboard/Index">Dashboard</a>
+                                </li>
+                                <li class="nav-item">
+                                <a class="@NavCls("/System")" aria-current="@Cur("/System")" asp-area="" asp-page="/System/Index">Systems</a>
+                                </li>
+
+                            <li class="nav-item">
+                                <a class="@NavCls("/Scan")" aria-current="@Cur("/Scan")" asp-area="" asp-page="/Scan/Index">Scans</a>
+                            </li>
+
+                               @if (User.IsInRole("Super User") || User.IsInRole("Admin"))
+                                {
+                                    <li class="nav-item dropdown">
+                                        <a class="@NavCls("/ConfigPanel", "nav-link dropdown-toggle text-dark")" data-bs-toggle="dropdown" href="#" role="button" @* aria-haspopup="true" aria-expanded="false" *@ id="menuConfigPanel">Config panel</a>
+                                        <div class="dropdown-menu">
+                                            <a class="@NavCls("/ConfigPanel/RuleBasedReviewEngine", "dropdown-item")" aria-current="@Cur("/ConfigPanel/RuleBasedReviewEngine")" asp-page="/ConfigPanel/RuleBasedReviewEngine" id="menuRuleBasedReviewEngine">Rule-based review engine</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="@NavCls("/ConfigPanel/SystemType", "dropdown-item")" aria-current="@Cur("/ConfigPanel/SystemType")" asp-page="/ConfigPanel/SystemType/Index" id="menuCustomer">System type</a>
+                                        </div>
+                                    </li>
+                                }
+
+                             @if (User.IsInRole("Admin"))
+                            {
+                            <li class="nav-item dropdown">
+                                <a class="@NavCls("/AdminPanel", "nav-link dropdown-toggle text-dark")" data-bs-toggle="dropdown" href="#" role="button" @* aria-haspopup="true" aria-expanded="false" *@ id="menuAdminPanel">Admin panel</a>
+                                <div class="dropdown-menu">
+                                    <a class="@NavCls("/AdminPanel/User", "dropdown-item")" aria-current="@Cur("/AdminPanel/User")" asp-page="/AdminPanel/User/Index" id="menuUsers">Users</a>
+                                    <a class="@NavCls("/AdminPanel/Role", "dropdown-item")" aria-current="@Cur("/AdminPanel/Role")" asp-page="/AdminPanel/Role/Index" id="menuRole">Roles</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="@NavCls("/AdminPanel/Settings", "dropdown-item")" aria-current="@Cur("/AdminPanel/Settings")" asp-page="/AdminPanel/Settings/Index" id="menuApplicationSettings">Application settings</a>
+                                </div>
+                            </li>
+                            }
+
+                                @if (User.IsInRole("Super User") || User.IsInRole("Admin"))
+                                {
+                                    <li class="nav-item dropdown">
+                                        <a class="@NavCls("/Log", "nav-link dropdown-toggle text-dark")" data-bs-toggle="dropdown" href="#" role="button" @* aria-haspopup="true" aria-expanded="false" *@ id="menuLogs">Logs</a>
+                                        <div class="dropdown-menu">
+                                            <a class="@NavCls("/Log/UserLogin", "dropdown-item")" aria-current="@Cur("/Log/UserLogin")" asp-page="/Log/UserLogin" id="menuUserLoginLog">User login log</a>
+                                            <a class="@NavCls("/Log/AuditTrail", "dropdown-item")" aria-current="@Cur("/Log/AuditTrail")" asp-page="/Log/AuditTrail" id="menuAuditTrailLog">Audit trail log</a>
+                                        </div>
+                                    </li>
+                                }
+
+                            <li class="nav-item">
+                                <a class="@NavCls("/Help")" aria-current="@Cur("/Help")" asp-area="" asp-page="/Help/Index"><i class="bi bi-life-preserver"></i> Help</a>
+                            </li>
+
+                            @* ── Completion-notification bell (large-scan-upload Tier 2/3 -- see
+                                 AuditTrailReview.Model.ScanUploadJob). Poll-based, not real-time
+                                 (see Pages/Notifications/Index.cshtml.cs's remarks) -- the script
+                                 below polls every 30s from every signed-in page. ── *@
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle text-dark position-relative" data-bs-toggle="dropdown" href="#" role="button" id="menuNotifications">
+                                    <i class="bi bi-bell"></i>
+                                    <span id="notificationBadge" class="badge rounded-pill bg-danger d-none" style="font-size: 0.65rem;">0</span>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-end p-0" id="notificationDropdown" style="min-width: 320px; max-height: 400px; overflow-y: auto;">
+                                    <div class="d-flex justify-content-between align-items-center px-3 py-2">
+                                        <span class="fw-semibold small">Notifications</span>
+                                        <a href="#" id="markAllReadLink" class="small">Mark all read</a>
+                                    </div>
+                                    <div class="dropdown-divider m-0"></div>
+                                    <div id="notificationList">
+                                        <span class="dropdown-item-text text-muted small">No new notifications.</span>
+                                    </div>
+                                </div>
+                            </li>
+
+                            </ul>
+
+                            <partial name="_LoginPartial" />
+                        }
+                    </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container-fluid">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container-fluid">
+            &copy; 2026 - GxPAuditTrailReview v 0.9 - powered by Open Audit Trail Standard (OATS)
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/table-sort.js"></script>
+    <script src="~/js/table-filter.js"></script>
+    <script src="~/js/table-pagination.js"></script>
+
+    @if (SignInManager.IsSignedIn(User))
+    {
+        @* Inactivity warning/auto-logout -- see wwwroot/js/session-timeout.js. Values come from the
+           Security tab (SecuritySettings), read live so a save applies on the next page load. *@
+        <div id="session-timeout-config" hidden
+             data-idle-minutes="@SecurityOptionsState.Current.IdleTimeoutMinutes"
+             data-warning-minutes="@SecurityOptionsState.Current.SessionWarningMinutes"></div>
+        <div class="modal fade" id="session-timeout-modal" tabindex="-1" aria-labelledby="session-timeout-title" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="session-timeout-title"><i class="bi bi-hourglass-split me-2"></i>Session about to expire</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0" role="alert">You'll be signed out in <strong id="session-timeout-countdown"></strong> due to inactivity.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="session-timeout-signout" class="btn btn-outline-secondary">Sign out now</button>
+                        <button type="button" id="session-timeout-stay" class="btn btn-primary">Stay signed in</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="~/js/session-timeout.js" asp-append-version="true"></script>
+
+        <script>
+            // ── Completion-notification bell -- polls Pages/Notifications for large-scan-upload
+            // (Tier 2/3, see AuditTrailReview.Model.ScanUploadJob) jobs that finished since the
+            // user last saw them, on every signed-in page. Mirrors Scan/Details.cshtml's own
+            // pollAiAnalysis IIFE (fetch + setTimeout recursion), simplified: no give-up window
+            // needed here -- this is an ongoing per-session poll, not one job's countdown -- and a
+            // longer 30s interval, since these jobs run minutes, not the ~60s window that
+            // justified that other poll's 5s cadence.
+            (function () {
+                const POLL_INTERVAL_MS = 30000;
+                const badge = document.getElementById('notificationBadge');
+                const list = document.getElementById('notificationList');
+                const markAllReadLink = document.getElementById('markAllReadLink');
+                if (!badge || !list) return;
+
+                const antiforgeryToken = document.querySelector('meta[name="request-verification-token"]')?.content;
+
+                function escapeHtml(str) {
+                    const div = document.createElement('div');
+                    div.textContent = str ?? '';
+                    return div.innerHTML;
+                }
+
+                function acknowledge(jobId) {
+                    return fetch('/Notifications?handler=Acknowledge&jobId=' + jobId, {
+                        method: 'POST',
+                        headers: { 'RequestVerificationToken': antiforgeryToken }
+                    });
+                }
+
+                function renderItems(items) {
+                    if (items.length === 0) {
+                        badge.classList.add('d-none');
+                        list.innerHTML = '<span class="dropdown-item-text text-muted small">No new notifications.</span>';
+                        return;
+                    }
+
+                    badge.textContent = items.length;
+                    badge.classList.remove('d-none');
+
+                    list.innerHTML = items.map(item => {
+                        const isFailed = item.status === 'Failed';
+                        const icon = isFailed ? 'bi-x-circle text-danger' : 'bi-check-circle text-success';
+                        const text = isFailed
+                            ? `Failed to scan '${escapeHtml(item.fileName)}'${item.errorMessage ? ': ' + escapeHtml(item.errorMessage) : ''}`
+                            : `'${escapeHtml(item.fileName)}' finished scanning`;
+                        const href = !isFailed && item.scanId ? `/Scan/Details?id=${item.scanId}` : '/Scan/Index';
+
+                        return `<a href="${href}" class="dropdown-item small py-2 notification-item" data-job-id="${item.jobId}">
+                            <i class="bi ${icon} me-1"></i>${text}
+                        </a>`;
+                    }).join('<div class="dropdown-divider m-0"></div>');
+
+                    list.querySelectorAll('.notification-item').forEach(el => {
+                        el.addEventListener('click', () => acknowledge(el.dataset.jobId));
+                    });
+                }
+
+                function poll() {
+                    fetch('/Notifications?handler=Poll', { headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-Background-Poll': '1' } })
+                        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+                        .then(data => renderItems(data.items || []))
+                        .catch(() => { /* transient failure -- just try again next interval */ })
+                        .finally(() => setTimeout(poll, POLL_INTERVAL_MS));
+                }
+
+                if (markAllReadLink) {
+                    markAllReadLink.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        fetch('/Notifications?handler=AcknowledgeAll', {
+                            method: 'POST',
+                            headers: { 'RequestVerificationToken': antiforgeryToken }
+                        }).then(() => renderItems([]));
+                    });
+                }
+
+                poll();
+            })();
+        </script>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

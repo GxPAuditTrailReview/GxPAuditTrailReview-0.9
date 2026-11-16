@@ -1,0 +1,24 @@
+﻿@page
+@model Disable2faModel
+@{
+    ViewData["Title"] = "Disable two-factor authentication (2FA)";
+    ViewData["ActivePage"] = ManageNavPages.Index;
+}
+@* Kept enabled (unlike the other two-factor pages, see Security/DisabledIdentityPages.cs) so a user
+   who turned 2FA on earlier can turn it off. Reached from the Profile page. *@
+
+<partial name="_StatusMessage" for="StatusMessage" />
+<h3>@ViewData["Title"]</h3>
+
+<div class="alert alert-warning" role="alert">
+    <p>
+        Two-factor authentication isn't supported by this application. After you turn it off you
+        sign in with your user name and password only.
+    </p>
+</div>
+
+<div>
+    <form method="post">
+        <button class="btn btn-danger" type="submit">Disable 2FA</button>
+    </form>
+</div>

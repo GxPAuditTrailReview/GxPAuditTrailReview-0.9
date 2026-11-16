@@ -1,0 +1,367 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.Scan.ScanModel
+
+@using AuditTrailReview.Engine
+@{
+    ViewData["Title"] = "New Scan";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Scans", "/Scan/Index"), new BreadcrumbItem("New scan") })" />
+<hr />
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <div class="rounded-circle bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center">
+        <i class="bi bi-shield-check text-primary fs-3"></i>
+    </div>
+    <div>
+        <h4 class="mb-0 fw-semibold">Audit Trail Scan</h4>
+        @if (Model.SystemATRInfo != null)
+        {
+            <small class="text-muted">
+                <i class="bi bi-hdd-stack me-1"></i>@Model.SystemATRInfo.SystemName
+                &nbsp;&bull;&nbsp;
+                <i class="bi bi-tag me-1"></i>@Model.SystemATRInfo.SystemPrefixID
+            </small>
+        }
+        else
+        {
+            <small class="text-muted">Upload an audit trail file to begin the analysis.</small>
+        }
+    </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-primary text-white d-flex align-items-center gap-2 py-3">
+                <i class="bi bi-cloud-upload fs-5"></i>
+                <span class="fw-semibold">Upload File</span>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="scanForm">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    @* ── unsupported-file warning (hidden by default) ── *@
+                    <div id="fileTypeWarning" class="alert alert-warning d-none d-flex align-items-center gap-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                        <span>
+                            Unsupported file type. Please upload a <strong>.csv</strong>,
+                            <strong>.xml</strong>, or <strong>.json</strong> file.
+                        </span>
+                    </div>
+
+                    @* ── file-too-large warning (hidden by default) -- see #ftpTooLargeModal,
+                         shown automatically alongside this when a file over 750 MiB is picked ── *@
+                    <div id="fileSizeWarning" class="alert alert-warning d-none d-flex align-items-center gap-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                        <span>
+                            This file is too large to process. It is bigger than 750 MB, which is a
+                            limitation of the system.
+                        </span>
+                    </div>
+
+                    <label for="uploadedFileInput"
+                           class="d-flex flex-column align-items-center justify-content-center gap-2 rounded border border-2 border-primary border-opacity-25 p-5 mb-3 text-center bg-light w-100"
+                           id="dropZone">
+                        <i class="bi bi-file-earmark-arrow-up text-primary fs-1"></i>
+                        <span class="fw-semibold text-dark">Click to browse or drag &amp; drop</span>
+                        <small class="text-muted" id="fileNameLabel">No file selected</small>
+                        <input type="file" id="uploadedFileInput" name="UploadedFile"
+                               class="d-none" accept=".csv,.xml,.json" />
+                    </label>
+
+                    <div class="d-flex gap-2 flex-wrap mb-4">
+                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2">
+                            <i class="bi bi-filetype-csv me-1"></i>.csv
+                        </span>
+                        <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-2">
+                            <i class="bi bi-filetype-xml me-1"></i>.xml
+                        </span>
+                        <span class="badge rounded-pill bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-2">
+                            <i class="bi bi-filetype-json me-1"></i>.json
+                        </span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button class="btn btn-primary btn-lg" type="submit" id="scanBtn" disabled>
+                            <i class="bi bi-play-circle me-2"></i>Run Scan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-light d-flex align-items-center gap-2 py-3">
+                <i class="bi bi-info-circle text-secondary fs-5"></i>
+                <span class="fw-semibold text-secondary">Supported Formats</span>
+            </div>
+            <div class="card-body d-flex flex-column gap-3">
+                <div class="d-flex gap-3 align-items-start">
+                    <span class="rounded bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center flex-shrink-0 p-2">
+                        <i class="bi bi-filetype-csv fs-5"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold">.csv &ndash; Comma-Separated Values</div>
+                        <small class="text-muted">Commonly exported from ERP, MES, or spreadsheet applications. Each row represents one audit event.</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-3 align-items-start">
+                    <span class="rounded bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center flex-shrink-0 p-2">
+                        <i class="bi bi-filetype-xml fs-5"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold">.xml &ndash; Structured XML</div>
+                        <small class="text-muted">Structured audit log format used by many enterprise systems and historians.</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-3 align-items-start">
+                    <span class="rounded bg-info bg-opacity-10 text-info d-flex align-items-center justify-content-center flex-shrink-0 p-2">
+                        <i class="bi bi-filetype-json fs-5"></i>
+                    </span>
+                    <div>
+                        <div class="fw-semibold">.json &ndash; JSON Records</div>
+                        <small class="text-muted">JSON-formatted audit trail records, typically exported from modern REST-based systems.</small>
+                    </div>
+                </div>
+                <hr class="my-1" />
+                <small class="text-muted">
+                    <i class="bi bi-exclamation-triangle me-1 text-warning"></i>
+                    The file must match the column structure configured for the selected system.
+                </small>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@* ── Full-page overlay shown while a scan is processing (see the Scripts section below).
+     Purely a perceived-progress animation: the server gives no real progress signal today, so
+     this fills toward 90% on a time-based curve calibrated from a real ~2-minute/50,000-record
+     scan, and only actually completes when the page navigates away (RedirectToPage to
+     Scan/Details on success for a small/synchronous file, or to Scan/Index for a large file now
+     queued for background processing -- see QueueLargeUploadAsync in Scan.cshtml.cs -- or this
+     same page reloading on a validation error). Uploads up to 10 MB still process synchronously,
+     inline, right here; anything larger is queued in the background instead of being rejected,
+     up to the ~736 MB outer ceiling below (see MAX_UPLOAD_BYTES and #ftpTooLargeModal). ── *@
+<div id="scanProgressOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background-color: rgba(0,0,0,0.6); z-index: 1080;">
+    <div class="card shadow-lg border-0" style="max-width: 420px; width: 90%;">
+        <div class="card-body text-center py-4">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Processing...</span>
+            </div>
+            <h5 class="fw-semibold mb-2">Processing your audit trail file</h5>
+            <p class="text-muted small mb-3" id="scanProgressHint">Please don't close or refresh this page.</p>
+            <div class="progress" role="progressbar" aria-label="Scan progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="height: 0.75rem;">
+                <div id="scanProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width: 0%"></div>
+            </div>
+            <small class="text-muted d-block mt-2" id="scanProgressLabel">Starting...</small>
+        </div>
+    </div>
+</div>
+
+@* ── Shown automatically when a file over 750 MiB is selected (see applyFile() below). Below
+     10 MB, a scan still runs synchronously in one HTTP request; above that, the upload is
+     accepted and queued for background processing instead of being rejected -- see
+     Scan.cshtml.cs's QueueLargeUploadAsync and AuditTrailReview.Model.ScanUploadJob -- so only a
+     genuinely oversized file still needs to go through the FTP integration directly. ── *@
+<div class="modal fade" id="ftpTooLargeModal" tabindex="-1" aria-labelledby="ftpTooLargeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ftpTooLargeModalLabel">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>File too large to upload here
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    This file is too large to process. It is bigger than 750 MB, which is a
+                    limitation of the system.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Understood</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const ALLOWED = ['.csv', '.xml', '.json'];
+
+        // ~736,432,000-byte outer ceiling -- above 10 MB, an upload is now queued for background
+        // processing (Tier 2 in-process up to 50 MB, Tier 3 via the Worker Service) instead of being rejected
+        // outright; see Scan.cshtml.cs's own remarks on SyncThresholdBytes/ImmediateThresholdBytes
+        // for the full tiering and the measured-timing data (50k records/6.9 MB ~2:00 up to
+        // 300k/42 MB 13:25, 500k/69 MB failing outright pre-2026-09-18, ~2 minutes as of that
+        // date's re-test) behind the tier boundaries. Kept a little below the server's own
+        // 786,432,000-byte (750 MiB) [RequestSizeLimit] backstop for multipart/form-data encoding
+        // overhead, same as the original 45 MB/50 MB client/server gap.
+        const MAX_UPLOAD_BYTES = 736_432_000;
+
+        const input       = document.getElementById('uploadedFileInput');
+        const label       = document.getElementById('fileNameLabel');
+        const btn         = document.getElementById('scanBtn');
+        const zone        = document.getElementById('dropZone');
+        const warning     = document.getElementById('fileTypeWarning');
+        const sizeWarning = document.getElementById('fileSizeWarning');
+        const ftpModalEl  = document.getElementById('ftpTooLargeModal');
+
+        function getExtension(filename) {
+            return filename.slice(filename.lastIndexOf('.')).toLowerCase();
+        }
+
+        function applyFile(file) {
+            const ext = getExtension(file.name);
+            const extValid = ALLOWED.includes(ext);
+            // Only meaningful once the extension itself is fine -- an invalid-extension file
+            // shows that warning instead, regardless of its size.
+            const tooLarge = extValid && file.size > MAX_UPLOAD_BYTES;
+            const valid = extValid && !tooLarge;
+
+            warning.classList.toggle('d-none', extValid);
+            sizeWarning.classList.toggle('d-none', !tooLarge);
+            label.textContent = file.name;
+            btn.disabled = !valid;
+
+            // Always keep bg-light; only add bg-danger for invalid files
+            zone.classList.remove('bg-primary', 'bg-danger', 'bg-opacity-10', 'bg-opacity-25');
+            zone.classList.add('bg-light');
+            if (!valid) {
+                zone.classList.add('bg-danger', 'bg-opacity-10');
+            }
+
+            if (tooLarge) {
+                bootstrap.Modal.getOrCreateInstance(ftpModalEl).show();
+            }
+        }
+
+        function clearFile() {
+            warning.classList.add('d-none');
+            sizeWarning.classList.add('d-none');
+            label.textContent = 'No file selected';
+            btn.disabled = true;
+            zone.classList.remove('bg-primary', 'bg-danger', 'bg-opacity-10', 'bg-opacity-25');
+            zone.classList.add('bg-light');
+        }
+
+        input.addEventListener('change', () => {
+            if (input.files.length === 0) { clearFile(); return; }
+            applyFile(input.files[0]);
+        });
+
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.remove('bg-light');
+            zone.classList.add('bg-primary', 'bg-opacity-25');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('bg-primary', 'bg-opacity-25', 'bg-opacity-10');
+            zone.classList.add('bg-light');
+        });
+
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('bg-opacity-25');
+            if (e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                applyFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        // ── Progress overlay: shown on submit, animates toward 90% while the server processes
+        // the file (parses -> maps -> evaluates all 19 rules -> saves), then the real page
+        // navigation (redirect to Scan/Details, or this page reloading on a validation error)
+        // is what actually ends it. Not a true completion percentage -- the server has no
+        // progress-reporting mechanism today -- just enough feedback that something is happening
+        // during a multi-minute upload, calibrated from a real ~2 minute / 50,000-record scan.
+        //
+        // Two cases, split at the server's own synchronous threshold (Scan.cshtml.cs
+        // SyncThresholdBytes -- keep SYNC_THRESHOLD_BYTES in sync):
+        //  - up to 10 MB: the request really does process the file, so show a time-based
+        //    estimate (previously this was applied to every size, which promised absurd times such
+        //    as "about 16522 seconds" for a large file that is actually only queued).
+        //  - over 10 MB: the request only uploads and queues the file, so processing time can't be
+        //    estimated here; show an indeterminate bar with elapsed time instead and say the scan
+        //    continues in the background.
+        (function () {
+            const form = document.getElementById('scanForm');
+            const overlay = document.getElementById('scanProgressOverlay');
+            const bar = document.getElementById('scanProgressBar');
+            const progressLabel = document.getElementById('scanProgressLabel');
+            const progressHint = document.getElementById('scanProgressHint');
+
+            const SYNC_THRESHOLD_BYTES = 10_000_000;
+            const BYTES_PER_SECOND_ESTIMATE = 57500; // ~6.9 MB / 50,000 records in ~120 seconds
+            const MIN_ESTIMATED_SECONDS = 3;
+            const FALLBACK_ESTIMATED_SECONDS = 15; // used if the file size can't be read for some reason
+
+            function formatDuration(totalSeconds) {
+                const seconds = Math.max(0, Math.round(totalSeconds));
+                if (seconds < 60) return seconds + (seconds === 1 ? ' second' : ' seconds');
+                const minutes = Math.floor(seconds / 60);
+                const rest = seconds % 60;
+                return minutes + (minutes === 1 ? ' minute' : ' minutes') + (rest ? ' ' + rest + ' s' : '');
+            }
+
+            let timer = null;
+
+            form.addEventListener('submit', function () {
+                const file = input.files && input.files[0];
+                const queued = !!file && file.size > SYNC_THRESHOLD_BYTES;
+                const estimatedSeconds = file
+                    ? Math.max(MIN_ESTIMATED_SECONDS, Math.min(file.size, SYNC_THRESHOLD_BYTES) / BYTES_PER_SECOND_ESTIMATE)
+                    : FALLBACK_ESTIMATED_SECONDS;
+                const tau = estimatedSeconds / 2.3; // reaches ~90% of the 90% ceiling around the estimate
+
+                overlay.classList.remove('d-none');
+                btn.disabled = true;
+
+                if (queued) {
+                    progressHint.textContent = 'Please keep this page open until the upload finishes. The scan then continues in the background and you will be notified when it is ready.';
+                    bar.style.width = '100%';
+                    bar.setAttribute('aria-valuenow', '100');
+                } else {
+                    progressHint.textContent = 'Please don\'t close or refresh this page.';
+                }
+
+                const startTime = performance.now();
+                timer = setInterval(function () {
+                    const elapsedSeconds = (performance.now() - startTime) / 1000;
+
+                    if (queued) {
+                        progressLabel.textContent = 'Uploading... ' + formatDuration(elapsedSeconds) + ' elapsed.';
+                        return;
+                    }
+
+                    const percent = Math.min(90, 90 * (1 - Math.exp(-elapsedSeconds / tau)));
+                    bar.style.width = percent.toFixed(0) + '%';
+                    bar.setAttribute('aria-valuenow', percent.toFixed(0));
+
+                    progressLabel.textContent = elapsedSeconds < estimatedSeconds
+                        ? 'Processing, this file is estimated to take about ' + formatDuration(estimatedSeconds) + '.'
+                        : 'Still processing (' + formatDuration(elapsedSeconds) + ' so far). Slower files can take longer than estimated.';
+                }, 250);
+
+                // No preventDefault(): the form submits normally, this overlay only covers the wait.
+            });
+
+            // Coming back to this page via the browser's back button can restore it from the
+            // back/forward cache with the overlay still showing; reset it.
+            window.addEventListener('pageshow', function (event) {
+                if (!event.persisted) return;
+                if (timer) { clearInterval(timer); timer = null; }
+                overlay.classList.add('d-none');
+                bar.style.width = '0%';
+                progressLabel.textContent = 'Starting...';
+                if (input.files && input.files.length) applyFile(input.files[0]);
+            });
+        })();
+    </script>
+}

@@ -1,0 +1,8 @@
+@page
+@model AuditTrailReview.WebApp.Pages.Notifications.IndexModel
+@{
+    Layout = null;
+}
+@* This page is never navigated to directly -- it exists purely to host the JSON poll/acknowledge
+   handlers the bell-icon dropdown in _Layout.cshtml calls (OnGetPollAsync, OnPostAcknowledgeAsync,
+   OnPostAcknowledgeAllAsync). See Pages/Notifications/Index.cshtml.cs. *@

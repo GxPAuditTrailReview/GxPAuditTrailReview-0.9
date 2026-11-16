@@ -1,0 +1,7 @@
+﻿@* Only Profile and Password are offered. Email change, external logins, two-factor setup and
+   personal-data pages are switched off (they answer 404) by Security/DisabledIdentityPages.cs,
+   which explains why each one is disabled. *@
+<ul class="nav nav-pills flex-column">
+    <li class="nav-item"><a class="nav-link @ManageNavPages.IndexNavClass(ViewContext)" id="profile" asp-page="./Index">Profile</a></li>
+    <li class="nav-item"><a class="nav-link @ManageNavPages.ChangePasswordNavClass(ViewContext)" id="change-password" asp-page="./ChangePassword">Password</a></li>
+</ul>

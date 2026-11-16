@@ -1,0 +1,32 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.AdminPanel.Role.EditModel
+@{
+    ViewData["Title"] = $"Edit role {Model.RoleName}";
+}
+
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Admin Panel"), new BreadcrumbItem("Roles", "/AdminPanel/Role/Index"), new BreadcrumbItem($"Edit {Model.RoleName}") })" />
+
+
+<div class="row">
+    <div class="col-md-4">
+
+        <form method="post">
+
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+                <a asp-page="./Index" class="btn btn-info">Back to List</a>
+            </div>
+            <br />
+
+
+            <div class="form-group">
+                <label asp-for="RoleName"></label>
+                <input asp-for="RoleName" class="form-control" />
+                <span asp-validation-for="RoleName" class="text-danger"></span>
+             </div>
+
+        </form>
+
+    </div>
+</div>

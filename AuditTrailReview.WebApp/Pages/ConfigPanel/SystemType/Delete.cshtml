@@ -1,0 +1,58 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.ConfigPanel.SystemType.DeleteModel
+
+@{
+    ViewData["Title"] = $"Delete system type {Model.SystemTypeInfo.SystemType}";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Config Panel"), new BreadcrumbItem("System Types", "/ConfigPanel/SystemType/Index"), new BreadcrumbItem($"Delete {Model.SystemTypeInfo.SystemType}") })" />
+
+<form method="post">
+    <input type="hidden" asp-for="SystemTypeInfo.Id" />
+
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-danger" disabled="@Model.IsInUse"
+                title="@(Model.IsInUse ? "Cannot delete: this system type is in use by one or more systems." : null)">
+            <i class="bi bi-trash-fill"></i> Delete System Type
+        </button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Cancel
+        </a>
+    </div>
+
+    @if (Model.IsInUse)
+    {
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+            <div>This system type is currently assigned to one or more systems and cannot be deleted.</div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+            <div>
+                Are you sure you want to delete <strong>@Model.SystemTypeInfo.SystemType</strong>?
+                This action cannot be undone.
+            </div>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white d-flex align-items-center py-2">
+            <i class="bi bi-tags me-2"></i>
+            <h6 class="mb-0">Delete System Type: @Model.SystemTypeInfo.SystemType</h6>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-tags me-1"></i>
+                    @Html.DisplayNameFor(model => model.SystemTypeInfo.SystemType)
+                </dt>
+                <dd class="col-sm-9">
+                    @Html.DisplayFor(model => model.SystemTypeInfo.SystemType)
+                </dd>
+            </dl>
+        </div>
+    </div>
+</form>

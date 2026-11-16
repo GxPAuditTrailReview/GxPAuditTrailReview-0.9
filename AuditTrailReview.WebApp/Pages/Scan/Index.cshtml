@@ -1,0 +1,231 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.Scan.IndexModel
+
+@{
+    ViewData["Title"] = "Scans";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Scans") })" />
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<hr />
+
+<form method="get" asp-page="./Index" class="row g-2 align-items-center mb-3">
+    <div class="col-auto">
+        <a asp-page-handler="Export" class="btn btn-success">
+            📥 Export to Excel
+        </a>
+    </div>
+    <div class="col-sm-4 col-lg-3">
+        <input type="text" name="SearchTerm" value="@Model.SearchTerm" class="form-control"
+               placeholder="Search by system, file name, file type, or date..." />
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-search"></i> Search
+        </button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+    {
+        <div class="col-auto">
+            <a asp-page="./Index" class="btn btn-outline-secondary">Clear</a>
+        </div>
+    }
+</form>
+
+<div class="table-responsive">
+<table class="table table-bordered table-hover table-striped sortable">
+    <thead class="table-primary">
+        <tr>
+@*             <th>
+                @Html.DisplayNameFor(model => model.Scan[0].SystemID)
+            </th> *@
+            <th>
+                System ID
+            </th>
+            <th>
+                System name
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Scan[0].ScanDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Scan[0].ATFileName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Scan[0].ATFileType)
+            </th>
+            <th>
+                Reviewed &amp; signed
+            </th>
+            <th class="no-sort"></th>
+        </tr>
+    </thead>
+    <tbody>
+@if (Model.Scan.Count == 0)
+{
+        <tr>
+            <td colspan="7" class="text-center text-muted py-4">
+                <i class="bi bi-inbox"></i>
+                @(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "No scans found." : $"No scans match \"{Model.SearchTerm}\".")
+            </td>
+        </tr>
+}
+@foreach (var item in Model.Scan) {
+        <tr>
+@*             <td>
+                @Html.DisplayFor(modelItem => item.SystemID)
+            </td> *@
+            <td>
+                @(item.SystemID != 0 ? item.System?.SystemPrefixID : "")
+            </td>
+            <td>
+                @(item.SystemID != 0 ? item.System?.SystemName : "")
+            </td>
+            <td>
+                <utc-datetime value="item.ScanDate" />
+            </td>
+            <td>    
+                @Html.DisplayFor(modelItem => item.ATFileName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ATFileType)
+            </td>
+            <td>
+                @if (item.ScanClosed)
+                {
+                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Yes</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>No</span>
+                }
+            </td>
+            <td>
+                <div class="w-35 btn-group" role="group">
+                    <a asp-page="./Details" asp-route-id="@item.Id" class="btn btn-warning nx-2"
+                       data-bs-toggle="tooltip" title="View details">
+                        <i class="bi bi-eye"></i>
+                    </a>
+
+                    @if (!item.ScanClosed)
+                    {
+                        <button type="button" class="btn btn-secondary nx-2"
+                                onclick="openAssignModal(@item.Id, @item.SystemID)"
+                                data-bs-toggle="tooltip" title="Assign system">
+                            <i class="bi bi-link-45deg"></i>
+                        </button>
+                    }
+                    @if (!item.ScanClosed && (User.IsInRole("Admin") || User.IsInRole("Super User")))
+                    {
+                        <a asp-page="./Delete" asp-route-id="@item.Id" class="btn btn-danger nx-2"
+                           data-bs-toggle="tooltip" title="Delete scan">
+                            <i class="bi bi-trash-fill"></i>
+                        </a>
+                    }
+                </div>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Scan list pages">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(Model.PageNumber <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index" asp-route-PageNumber="@(Model.PageNumber - 1)" asp-route-SearchTerm="@Model.SearchTerm"
+                   aria-label="Previous" tabindex="@(Model.PageNumber <= 1 ? "-1" : null)">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+            </li>
+            @foreach (var p in Model.PageNumbersToDisplay)
+            {
+                if (p is null)
+                {
+                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                }
+                else
+                {
+                    <li class="page-item @(p == Model.PageNumber ? "active" : "")">
+                        <a class="page-link" asp-page="./Index" asp-route-PageNumber="@p" asp-route-SearchTerm="@Model.SearchTerm">@p</a>
+                    </li>
+                }
+            }
+            <li class="page-item @(Model.PageNumber >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-page="./Index" asp-route-PageNumber="@(Model.PageNumber + 1)" asp-route-SearchTerm="@Model.SearchTerm"
+                   aria-label="Next" tabindex="@(Model.PageNumber >= Model.TotalPages ? "-1" : null)">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <p class="text-center text-muted small">
+        Page @Model.PageNumber of @Model.TotalPages
+        (@Model.TotalCount total scan@(Model.TotalCount == 1 ? "" : "s")@(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "" : $" matching \"{Model.SearchTerm}\"")).
+    </p>
+}
+
+<!-- Assign System Modal -->
+<div class="modal fade" id="assignSystemModal" tabindex="-1" aria-labelledby="assignSystemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="AssignSystem">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignSystemModalLabel">Assign system to scan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="AssignScanId" id="assignScanId" />
+                    <input type="hidden" name="PageNumber" value="@Model.PageNumber" />
+                    <input type="hidden" name="SearchTerm" value="@Model.SearchTerm" />
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label for="assignSystemId" class="form-label">Select system</label>
+                        <select name="AssignSystemId" id="assignSystemId" class="form-select" required>
+                            <option value="" disabled selected>-- Select a system --</option>
+                            <option value="0">— No system —</option>
+                            @foreach (var sys in Model.Systems)
+                            {
+                                <option value="@sys.Id">@sys.SystemPrefixID — @sys.SystemName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function openAssignModal(scanId, currentSystemId) {
+            document.getElementById('assignScanId').value = scanId;
+            const select = document.getElementById('assignSystemId');
+            const option = select.querySelector(`option[value='${currentSystemId}']`);
+            select.selectedIndex = option ? option.index : 0;
+            new bootstrap.Modal(document.getElementById('assignSystemModal')).show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+            tooltipEls.forEach(function (el) {
+                new bootstrap.Tooltip(el);
+            });
+        });
+    </script>
+}

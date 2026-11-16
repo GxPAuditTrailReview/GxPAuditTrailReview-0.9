@@ -1,0 +1,637 @@
+@page
+@model AuditTrailReview.WebApp.Pages.ConfigPanel.RuleBasedReviewEngineModel
+@{
+    ViewData["Title"] = "Rule-Based Review Engine";
+}
+
+<div class="mt-4">
+
+    <partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Config Panel"), new BreadcrumbItem("Rule-Based Review Engine", "/ConfigPanel/RuleBasedReviewEngine"), new BreadcrumbItem($"Rules active {Model.Categories.SelectMany(c => c.Rules).Count(r => r.IsEnabled)} / {Model.Categories.SelectMany(c => c.Rules).Count()}") })" />
+
+    <hr />
+
+    <div class="mb-3">
+        <a asp-page-handler="ExportAll" class="btn btn-success">
+            📥 Export to Excel
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @if (TempData["SettingsSuccess"] != null)
+    {
+        <div class="alert alert-success">@TempData["SettingsSuccess"]</div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    @{
+        var effectiveActiveTab = Model.ActiveTab ?? (TempData.Peek("SettingsSuccess") != null ? "engine-settings" : "rule-config");
+    }
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4" id="engineTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(effectiveActiveTab == "rule-config" ? "active" : "")" id="rule-config-tab" data-bs-toggle="tab"
+                    data-bs-target="#rule-config" type="button" role="tab"
+                    aria-controls="rule-config" aria-selected="@(effectiveActiveTab == "rule-config" ? "true" : "false")">
+                <i class="bi bi-toggles me-1"></i> Rule Configuration
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(effectiveActiveTab == "engine-settings" ? "active" : "")" id="engine-settings-tab" data-bs-toggle="tab"
+                    data-bs-target="#engine-settings" type="button" role="tab"
+                    aria-controls="engine-settings" aria-selected="@(effectiveActiveTab == "engine-settings" ? "true" : "false")">
+                <i class="bi bi-gear me-1"></i> Engine Settings
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(effectiveActiveTab == "audit-trail" ? "active" : "")" id="audit-trail-tab" data-bs-toggle="tab"
+                    data-bs-target="#audit-trail" type="button" role="tab"
+                    aria-controls="audit-trail" aria-selected="@(effectiveActiveTab == "audit-trail" ? "true" : "false")">
+                📜 Audit Trail
+                <span class="badge bg-primary ms-1">@(Model.AuditTrailRulesTotalCount + Model.AuditTrailSettingsTotalCount)</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="engineTabsContent">
+
+        <!-- Tab 1: Rule Configuration -->
+        <div class="tab-pane fade @(effectiveActiveTab == "rule-config" ? "show active" : "")" id="rule-config" role="tabpanel" aria-labelledby="rule-config-tab">
+
+            <form method="post" asp-page-handler="SaveRules">
+
+                <button type="submit" class="btn btn-primary mb-4">Save Configuration</button>
+
+                @for (int c = 0; c < Model.Categories.Count; c++)
+                {
+                    var rules = Model.Categories[c].Rules.ToList();
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-header bg-dark text-white">
+                            <strong>@Model.Categories[c].Code.</strong> @Model.Categories[c].Name
+                        </div>
+
+                        <input type="hidden" name="Categories[@c].Code" value="@Model.Categories[c].Code" />
+                        <input type="hidden" name="Categories[@c].Name" value="@Model.Categories[c].Name" />
+
+                        <div class="card-body">
+                            @for (int r = 0; r < rules.Count; r++)
+                            {
+                                <div class="row align-items-center mb-3">
+
+                                    <div class="col-md-2">
+                                        <div class="form-check form-switch">
+                                            <input type="hidden" name="Categories[@c].Rules[@r].Id" value="@rules[r].Id" />
+                                            <input type="hidden" name="Categories[@c].Rules[@r].Description" value="@rules[r].Description" />
+                                            <input type="hidden" name="Categories[@c].Rules[@r].RegulatoryBasis" value="@rules[r].RegulatoryBasis" />
+                                            <input type="hidden" name="Categories[@c].Rules[@r].GuidanceBasis" value="@rules[r].GuidanceBasis" />
+
+                                            <input type="checkbox"
+                                                   name="Categories[@c].Rules[@r].IsEnabled"
+                                                   value="true"
+                                                   class="form-check-input"
+                                                   id="rule_@(c)_@(r)"
+                                                   checked="@rules[r].IsEnabled" />
+                                            <input type="hidden" name="Categories[@c].Rules[@r].IsEnabled" value="false" />
+
+                                            <label class="form-check-label" for="rule_@(c)_@(r)">
+                                                @(rules[r].IsEnabled ? "Enabled" : "Disabled")
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <strong>@rules[r].RuleCode</strong>
+                                        – @rules[r].Description
+                                        @if (rules[r].RuleCode == "D2")
+                                        {
+                                            <span class="text-muted">(x=@Model.Settings.UsernameMinLength)</span>
+                                        }
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        @if (!string.IsNullOrWhiteSpace(rules[r].RegulatoryBasis))
+                                        {
+                                            @foreach (var citation in rules[r].RegulatoryBasis!.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                            {
+                                                <span class="badge bg-secondary me-1 mb-1" title="Binding regulatory clause this rule's check directly enforces.">@citation</span>
+                                            }
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(rules[r].GuidanceBasis))
+                                        {
+                                            <span class="text-muted small d-block mb-1" title="No binding clause requires this check, but internationally harmonized good practice expects it.">Best practice:</span>
+                                            @foreach (var citation in rules[r].GuidanceBasis!.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                            {
+                                                <span class="badge bg-light text-dark border me-1 mb-1" title="Best-practice / international-harmonization expectation -- a recommendation, not a binding requirement.">@citation</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small" title="No binding clause and no international-harmonization guidance was found for this rule -- see Audit-Trail-Rule-Regulatory-Basis-Review.md. It is a local design choice; it may still be a reasonable internal policy.">Neither cited nor guidance-backed</span>
+                                        }
+                                    </div>
+
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+            </form>
+
+        </div>
+
+        <!-- Tab 2: Engine Settings -->
+        <div class="tab-pane fade @(effectiveActiveTab == "engine-settings" ? "show active" : "")" id="engine-settings" role="tabpanel" aria-labelledby="engine-settings-tab">
+
+            <form method="post" asp-page-handler="SaveSettings">
+
+                <button type="submit" class="btn btn-primary mb-4">Save Settings</button>
+
+                <!-- Working Hours -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <strong>Working Hours</strong>
+                        <span class="ms-2 text-white-50 small">Rule C3</span>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="row mb-3 align-items-center">
+                            <label class="col-md-5 col-form-label" for="WorkdayTimeZone">
+                                <strong>[C3]</strong> Time zone for working hours
+                            </label>
+                            <div class="col-md-3">
+                                <select id="WorkdayTimeZone" name="Settings.WorkdayTimeZone" class="form-select">
+                                    <option value="" selected="@(string.IsNullOrEmpty(Model.Settings.WorkdayTimeZone) ? "selected" : null)">UTC (not configured)</option>
+                                    @foreach (var tz in Model.WorkdayTimeZoneIds)
+                                    {
+                                        <option value="@tz" selected="@(tz == Model.Settings.WorkdayTimeZone ? "selected" : null)">@tz</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                Workday start/end hour and the weekend check below are evaluated in this time zone (timestamps are still stored and compared internally in UTC either way). Auto-filled from your browser's own time zone below if nothing has been saved yet — review it before saving.
+                            </div>
+                        </div>
+
+                        <div class="row mb-3 align-items-center">
+                            <label class="col-md-5 col-form-label" for="WorkdayStartHour">
+                                <strong>[C3]</strong> Workday start hour (0–23)
+                            </label>
+                            <div class="col-md-3">
+                                <input type="number" id="WorkdayStartHour" name="Settings.WorkdayStartHour"
+                                       class="form-control"
+                                       value="@Model.Settings.WorkdayStartHour"
+                                       min="0" max="23" />
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                Changes recorded before this hour, in the time zone selected above, will be flagged as outside working hours.
+                            </div>
+                        </div>
+
+                        <div class="row mb-3 align-items-center">
+                            <label class="col-md-5 col-form-label" for="WorkdayEndHour">
+                                <strong>[C3]</strong> Workday end hour (1–24)
+                            </label>
+                            <div class="col-md-3">
+                                <input type="number" id="WorkdayEndHour" name="Settings.WorkdayEndHour"
+                                       class="form-control"
+                                       value="@Model.Settings.WorkdayEndHour"
+                                       min="1" max="24" />
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                Changes recorded at or after this hour, in the time zone selected above, will be flagged. Use 24 for end-of-day.
+                            </div>
+                        </div>
+
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-md-5 col-form-label">
+                                <strong>[C3]</strong> Allow weekends as working days
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check form-switch mt-2">
+                                    <input type="checkbox" id="AllowWeekends" name="Settings.AllowWeekends"
+                                           value="true"
+                                           class="form-check-input"
+                                           @(Model.Settings.AllowWeekends ? "checked" : "") />
+                                    <input type="hidden" name="Settings.AllowWeekends" value="false" />
+                                    <label class="form-check-label" for="AllowWeekends">
+                                        @(Model.Settings.AllowWeekends ? "Yes" : "No")
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                When enabled, weekend records are not flagged as outside working hours.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Username Validation -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <strong>Username Validation</strong>
+                        <span class="ms-2 text-white-50 small">Rule D2</span>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="row mb-3 align-items-center">
+                            <label class="col-md-5 col-form-label" for="UsernameMinLength">
+                                <strong>[D2]</strong> Minimum number of characters in the Username field
+                            </label>
+                            <div class="col-md-3">
+                                <input type="number" id="UsernameMinLength" name="Settings.UsernameMinLength"
+                                       class="form-control"
+                                       value="@Model.Settings.UsernameMinLength"
+                                       min="1" max="200" />
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                Usernames shorter than this value will be flagged.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Shared/System Account Detection -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <strong>Shared/System Account Detection</strong>
+                        <span class="ms-2 text-white-50 small">Rule D1</span>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="row mb-3">
+                            <label class="col-md-5 col-form-label" for="AdditionalSystemAccountPatterns">
+                                <strong>[D1]</strong> Additional account name patterns to flag
+                            </label>
+                            <div class="col-md-5">
+                                <textarea id="AdditionalSystemAccountPatterns" name="Settings.AdditionalSystemAccountPatterns"
+                                          class="form-control" rows="5"
+                                          placeholder="One pattern per line or comma-separated, e.g. contractor*…">@Model.Settings.AdditionalSystemAccountPatterns</textarea>
+                            </div>
+                            <div class="col-md-2 text-muted small pt-2">
+                                Flags usernames matching known shared/generic/system account names and naming
+                                conventions (e.g. "admin", "svc-integration"). A pattern ending in "*" matches as a
+                                prefix (e.g. "contractor*" matches "contractor_jdoe"); anything else matches only an
+                                exact username. Independent of the personal-name-shape heuristic used by the
+                                file-preview Excel export (formerly the ORIGINAL, unrelated rule D1, since
+                                removed -- not this card's own current D1 label). Case-insensitive.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Mass Change Detection -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <strong>Mass Change Detection</strong>
+                        <span class="ms-2 text-white-50 small">Rule E1</span>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="row mb-3 align-items-center">
+                            <label class="col-md-5 col-form-label" for="MassChangeThresholdCount">
+                                <strong>[E1]</strong> Records within the window to count as a "mass change"
+                            </label>
+                            <div class="col-md-3">
+                                <input type="number" id="MassChangeThresholdCount" name="Settings.MassChangeThresholdCount"
+                                       class="form-control"
+                                       value="@Model.Settings.MassChangeThresholdCount"
+                                       min="2" max="100000" />
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                A burst of this many records or more, all within the window below, is flagged.
+                            </div>
+                        </div>
+
+                        <div class="row mb-3 align-items-center">
+                            <label class="col-md-5 col-form-label" for="MassChangeWindowSeconds">
+                                <strong>[E1]</strong> Window size (seconds)
+                            </label>
+                            <div class="col-md-3">
+                                <input type="number" id="MassChangeWindowSeconds" name="Settings.MassChangeWindowSeconds"
+                                       class="form-control" step="0.1"
+                                       value="@Model.Settings.MassChangeWindowSeconds"
+                                       min="0.1" max="86400" />
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                Time span the record count above is evaluated over.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+
+        <!-- Tab 3: Audit Trail -- the app's own change log (dbo.AuditTrail). Rule-enablement
+             changes and engine-settings changes both log under AuditObjectType.ConfigPanel (as
+             does ConfigPanel/SystemType's own Create/Edit/Delete), so each sub-tab below filters
+             by Object instead: a "Rule " prefix for rule changes, exactly "EngineSettings" for
+             settings changes -- see RuleBasedReviewEngineModel.LoadAuditTrailAsync. A SystemType
+             entry (Object == "SystemType") matches neither and is correctly excluded; it has its
+             own Audit trail tab on ConfigPanel/SystemType/Details. -->
+        <div class="tab-pane fade @(effectiveActiveTab == "audit-trail" ? "show active" : "")" id="audit-trail" role="tabpanel" aria-labelledby="audit-trail-tab">
+
+            <!-- Sub-tab navigation -->
+            <ul class="nav nav-tabs mb-3" id="auditTrailSubTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(Model.AuditTrailSubTab == "rules" ? "active" : "")" id="audit-trail-rules-tab" data-bs-toggle="tab"
+                            data-bs-target="#audit-trail-rules" type="button" role="tab"
+                            aria-controls="audit-trail-rules" aria-selected="@(Model.AuditTrailSubTab == "rules" ? "true" : "false")">
+                        <i class="bi bi-toggles me-1"></i> Rule Configuration
+                        <span class="badge bg-primary ms-1">@Model.AuditTrailRulesTotalCount</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(Model.AuditTrailSubTab == "settings" ? "active" : "")" id="audit-trail-settings-tab" data-bs-toggle="tab"
+                            data-bs-target="#audit-trail-settings" type="button" role="tab"
+                            aria-controls="audit-trail-settings" aria-selected="@(Model.AuditTrailSubTab == "settings" ? "true" : "false")">
+                        <i class="bi bi-gear me-1"></i> Engine Settings
+                        <span class="badge bg-primary ms-1">@Model.AuditTrailSettingsTotalCount</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="auditTrailSubTabsContent">
+
+                <!-- Rule Configuration audit sub-tab -->
+                <div class="tab-pane fade @(Model.AuditTrailSubTab == "rules" ? "show active" : "")" id="audit-trail-rules" role="tabpanel" aria-labelledby="audit-trail-rules-tab">
+
+                    <form method="get" asp-page="./RuleBasedReviewEngine" class="row g-2 align-items-center mb-3">
+                        <input type="hidden" name="ActiveTab" value="audit-trail" />
+                        <input type="hidden" name="AuditTrailSubTab" value="rules" />
+                        <input type="hidden" name="AuditTrailSettingsPage" value="@Model.AuditTrailSettingsPage" />
+                        <input type="hidden" name="AuditTrailSettingsSearchTerm" value="@Model.AuditTrailSettingsSearchTerm" />
+                        <div class="col-sm-4 col-lg-3">
+                            <input type="text" name="AuditTrailRulesSearchTerm" value="@Model.AuditTrailRulesSearchTerm" class="form-control"
+                                   placeholder="Search by user, operation, rule, value, or reason..." />
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.AuditTrailRulesSearchTerm))
+                        {
+                            <div class="col-auto">
+                                <a asp-page="./RuleBasedReviewEngine" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="rules"
+                                   asp-route-AuditTrailSettingsPage="@Model.AuditTrailSettingsPage"
+                                   asp-route-AuditTrailSettingsSearchTerm="@Model.AuditTrailSettingsSearchTerm"
+                                   class="btn btn-outline-secondary">Clear</a>
+                            </div>
+                        }
+                    </form>
+
+                    @if (Model.AuditTrailRulesEntries.Any())
+                    {
+                        <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-striped sortable">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].Timestamp)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].UserID)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].Operation)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].Object)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].Field)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].OldValue)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].NewValue)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailRulesEntries[0].Reason)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.AuditTrailRulesEntries)
+                                {
+                                    <tr>
+                                        <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Object)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        </div>
+
+                        @if (Model.AuditTrailRulesTotalPages > 1)
+                        {
+                            <nav aria-label="Rule configuration audit trail pages">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item @(Model.AuditTrailRulesPage <= 1 ? "disabled" : "")">
+                                        <a class="page-link" asp-page="./RuleBasedReviewEngine"
+                                           asp-route-AuditTrailRulesPage="@(Model.AuditTrailRulesPage - 1)" asp-route-AuditTrailRulesSearchTerm="@Model.AuditTrailRulesSearchTerm"
+                                           asp-route-AuditTrailSettingsPage="@Model.AuditTrailSettingsPage" asp-route-AuditTrailSettingsSearchTerm="@Model.AuditTrailSettingsSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="rules"
+                                           aria-label="Previous" tabindex="@(Model.AuditTrailRulesPage <= 1 ? "-1" : null)">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    @foreach (var p in Model.AuditTrailRulesPageNumbers)
+                                    {
+                                        if (p is null)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                        }
+                                        else
+                                        {
+                                            <li class="page-item @(p == Model.AuditTrailRulesPage ? "active" : "")">
+                                                <a class="page-link" asp-page="./RuleBasedReviewEngine"
+                                                   asp-route-AuditTrailRulesPage="@p" asp-route-AuditTrailRulesSearchTerm="@Model.AuditTrailRulesSearchTerm"
+                                                   asp-route-AuditTrailSettingsPage="@Model.AuditTrailSettingsPage" asp-route-AuditTrailSettingsSearchTerm="@Model.AuditTrailSettingsSearchTerm"
+                                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="rules">@p</a>
+                                            </li>
+                                        }
+                                    }
+                                    <li class="page-item @(Model.AuditTrailRulesPage >= Model.AuditTrailRulesTotalPages ? "disabled" : "")">
+                                        <a class="page-link" asp-page="./RuleBasedReviewEngine"
+                                           asp-route-AuditTrailRulesPage="@(Model.AuditTrailRulesPage + 1)" asp-route-AuditTrailRulesSearchTerm="@Model.AuditTrailRulesSearchTerm"
+                                           asp-route-AuditTrailSettingsPage="@Model.AuditTrailSettingsPage" asp-route-AuditTrailSettingsSearchTerm="@Model.AuditTrailSettingsSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="rules"
+                                           aria-label="Next" tabindex="@(Model.AuditTrailRulesPage >= Model.AuditTrailRulesTotalPages ? "-1" : null)">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <p class="text-center text-muted small">
+                                Page @Model.AuditTrailRulesPage of @Model.AuditTrailRulesTotalPages
+                                (@Model.AuditTrailRulesTotalCount total entr@(Model.AuditTrailRulesTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailRulesSearchTerm) ? "" : $" matching \"{Model.AuditTrailRulesSearchTerm}\"")).
+                            </p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted mt-2">
+                            @(string.IsNullOrWhiteSpace(Model.AuditTrailRulesSearchTerm) ? "No rule configuration changes found." : $"No entries match \"{Model.AuditTrailRulesSearchTerm}\".")
+                        </p>
+                    }
+                </div>
+
+                <!-- Engine Settings audit sub-tab -->
+                <div class="tab-pane fade @(Model.AuditTrailSubTab == "settings" ? "show active" : "")" id="audit-trail-settings" role="tabpanel" aria-labelledby="audit-trail-settings-tab">
+
+                    <form method="get" asp-page="./RuleBasedReviewEngine" class="row g-2 align-items-center mb-3">
+                        <input type="hidden" name="ActiveTab" value="audit-trail" />
+                        <input type="hidden" name="AuditTrailSubTab" value="settings" />
+                        <input type="hidden" name="AuditTrailRulesPage" value="@Model.AuditTrailRulesPage" />
+                        <input type="hidden" name="AuditTrailRulesSearchTerm" value="@Model.AuditTrailRulesSearchTerm" />
+                        <div class="col-sm-4 col-lg-3">
+                            <input type="text" name="AuditTrailSettingsSearchTerm" value="@Model.AuditTrailSettingsSearchTerm" class="form-control"
+                                   placeholder="Search by user, operation, field, value, or reason..." />
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.AuditTrailSettingsSearchTerm))
+                        {
+                            <div class="col-auto">
+                                <a asp-page="./RuleBasedReviewEngine" asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="settings"
+                                   asp-route-AuditTrailRulesPage="@Model.AuditTrailRulesPage"
+                                   asp-route-AuditTrailRulesSearchTerm="@Model.AuditTrailRulesSearchTerm"
+                                   class="btn btn-outline-secondary">Clear</a>
+                            </div>
+                        }
+                    </form>
+
+                    @if (Model.AuditTrailSettingsEntries.Any())
+                    {
+                        <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-striped sortable">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailSettingsEntries[0].Timestamp)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailSettingsEntries[0].UserID)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailSettingsEntries[0].Operation)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailSettingsEntries[0].Field)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailSettingsEntries[0].OldValue)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailSettingsEntries[0].NewValue)</th>
+                                    <th>@Html.DisplayNameFor(model => model.AuditTrailSettingsEntries[0].Reason)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.AuditTrailSettingsEntries)
+                                {
+                                    <tr>
+                                        <td>@Html.DisplayFor(modelItem => item.Timestamp)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.UserID)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Operation)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Field)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.OldValue)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.NewValue)</td>
+                                        <td>@Html.DisplayFor(modelItem => item.Reason)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        </div>
+
+                        @if (Model.AuditTrailSettingsTotalPages > 1)
+                        {
+                            <nav aria-label="Engine settings audit trail pages">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item @(Model.AuditTrailSettingsPage <= 1 ? "disabled" : "")">
+                                        <a class="page-link" asp-page="./RuleBasedReviewEngine"
+                                           asp-route-AuditTrailSettingsPage="@(Model.AuditTrailSettingsPage - 1)" asp-route-AuditTrailSettingsSearchTerm="@Model.AuditTrailSettingsSearchTerm"
+                                           asp-route-AuditTrailRulesPage="@Model.AuditTrailRulesPage" asp-route-AuditTrailRulesSearchTerm="@Model.AuditTrailRulesSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="settings"
+                                           aria-label="Previous" tabindex="@(Model.AuditTrailSettingsPage <= 1 ? "-1" : null)">
+                                            <i class="bi bi-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                    @foreach (var p in Model.AuditTrailSettingsPageNumbers)
+                                    {
+                                        if (p is null)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                        }
+                                        else
+                                        {
+                                            <li class="page-item @(p == Model.AuditTrailSettingsPage ? "active" : "")">
+                                                <a class="page-link" asp-page="./RuleBasedReviewEngine"
+                                                   asp-route-AuditTrailSettingsPage="@p" asp-route-AuditTrailSettingsSearchTerm="@Model.AuditTrailSettingsSearchTerm"
+                                                   asp-route-AuditTrailRulesPage="@Model.AuditTrailRulesPage" asp-route-AuditTrailRulesSearchTerm="@Model.AuditTrailRulesSearchTerm"
+                                                   asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="settings">@p</a>
+                                            </li>
+                                        }
+                                    }
+                                    <li class="page-item @(Model.AuditTrailSettingsPage >= Model.AuditTrailSettingsTotalPages ? "disabled" : "")">
+                                        <a class="page-link" asp-page="./RuleBasedReviewEngine"
+                                           asp-route-AuditTrailSettingsPage="@(Model.AuditTrailSettingsPage + 1)" asp-route-AuditTrailSettingsSearchTerm="@Model.AuditTrailSettingsSearchTerm"
+                                           asp-route-AuditTrailRulesPage="@Model.AuditTrailRulesPage" asp-route-AuditTrailRulesSearchTerm="@Model.AuditTrailRulesSearchTerm"
+                                           asp-route-ActiveTab="audit-trail" asp-route-AuditTrailSubTab="settings"
+                                           aria-label="Next" tabindex="@(Model.AuditTrailSettingsPage >= Model.AuditTrailSettingsTotalPages ? "-1" : null)">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                            <p class="text-center text-muted small">
+                                Page @Model.AuditTrailSettingsPage of @Model.AuditTrailSettingsTotalPages
+                                (@Model.AuditTrailSettingsTotalCount total entr@(Model.AuditTrailSettingsTotalCount == 1 ? "y" : "ies")@(string.IsNullOrWhiteSpace(Model.AuditTrailSettingsSearchTerm) ? "" : $" matching \"{Model.AuditTrailSettingsSearchTerm}\"")).
+                            </p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted mt-2">
+                            @(string.IsNullOrWhiteSpace(Model.AuditTrailSettingsSearchTerm) ? "No engine settings changes found." : $"No entries match \"{Model.AuditTrailSettingsSearchTerm}\".")
+                        </p>
+                    }
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    // Rule C3's WorkdayTimeZone dropdown: auto-fill it from the browser's own detected time
+    // zone, but only when nothing has been explicitly saved yet (still the default "UTC (not
+    // configured)" empty-value option) -- never override an admin's own prior choice. This
+    // only pre-selects the option client-side; the admin still has to click Save for it to
+    // take effect, and can pick something else first.
+    (function () {
+        var select = document.getElementById('WorkdayTimeZone');
+        if (!select || select.value !== '') {
+            return;
+        }
+
+        try {
+            var detected = window.Intl && Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (!detected) {
+                return;
+            }
+
+            for (var i = 0; i < select.options.length; i++) {
+                if (select.options[i].value === detected) {
+                    select.value = detected;
+                    break;
+                }
+            }
+        } catch (e) {
+            // Time zone detection unavailable in this browser -- leave the UTC default selected.
+        }
+    })();
+</script>
+

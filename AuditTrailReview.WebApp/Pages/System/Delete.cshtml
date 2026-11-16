@@ -1,0 +1,63 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.System.DeleteModel;
+
+@{
+    ViewData["Title"] = $"Delete system {Model.SystemATRInfo.SystemPrefixID}";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Systems", "/System/Index"), new BreadcrumbItem($"Delete {Model.SystemATRInfo.SystemPrefixID}") })" />
+
+<form method="post">
+    <input type="hidden" asp-for="SystemATRInfo.Id" />
+
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash-fill"></i> Delete System
+        </button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Cancel
+        </a>
+    </div>
+
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+            Are you sure you want to delete <strong>@Model.SystemATRInfo.SystemPrefixID -- @Model.SystemATRInfo.SystemName</strong>?
+            This action cannot be undone.
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white d-flex align-items-center py-2">
+            <i class="bi bi-hdd-network me-2"></i>
+            <h6 class="mb-0">Delete System: @Model.SystemATRInfo.SystemPrefixID</h6>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-upc-scan me-1"></i>
+                    @Html.DisplayNameFor(model => model.SystemATRInfo.SystemPrefixID)
+                </dt>
+                <dd class="col-sm-9">
+                    @Html.DisplayFor(model => model.SystemATRInfo.SystemPrefixID)
+                </dd>
+
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-hdd-network me-1"></i>
+                    @Html.DisplayNameFor(model => model.SystemATRInfo.SystemName)
+                </dt>
+                <dd class="col-sm-9">
+                    @Html.DisplayFor(model => model.SystemATRInfo.SystemName)
+                </dd>
+
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-tags me-1"></i>
+                    System Type
+                </dt>
+                <dd class="col-sm-9">
+                    @(Model.SystemTypeInfo?.SystemType ?? "--")
+                </dd>
+            </dl>
+        </div>
+    </div>
+</form>

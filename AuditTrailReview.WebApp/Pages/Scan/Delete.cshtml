@@ -1,0 +1,77 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.Scan.DeleteModel
+
+@{
+    ViewData["Title"] = $"Delete scan {Model.Scan.ATFileName}";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Scans", "/Scan/Index"), new BreadcrumbItem($"Delete {Model.Scan.ATFileName}") })" />
+
+<form method="post">
+    <input type="hidden" asp-for="Scan.Id" />
+
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash-fill"></i> Delete Scan
+        </button>
+        <a asp-page="./Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Cancel
+        </a>
+    </div>
+
+    <div class="alert alert-warning d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div>
+            Are you sure you want to delete the scan of <strong>@Model.Scan.ATFileName</strong>?
+            This also removes all of its findings and AI analysis. This action cannot be undone.
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white d-flex align-items-center py-2">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            <h6 class="mb-0">Delete Scan: @Model.Scan.ATFileName</h6>
+        </div>
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-hdd-network me-1"></i> System
+                </dt>
+                <dd class="col-sm-9">
+                    @if (Model.Scan.SystemID != 0)
+                    {
+                        @Html.DisplayFor(model => model.Scan.System!.SystemPrefixID) <text>--</text> @Html.DisplayFor(model => model.Scan.System!.SystemName)
+                    }
+                    else
+                    {
+                        <span class="text-muted fst-italic">Not assigned</span>
+                    }
+                </dd>
+
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-calendar-event me-1"></i>
+                    @Html.DisplayNameFor(model => model.Scan.ScanDate)
+                </dt>
+                <dd class="col-sm-9">
+                    <utc-datetime value="Model.Scan.ScanDate" />
+                </dd>
+
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-file-earmark me-1"></i>
+                    @Html.DisplayNameFor(model => model.Scan.ATFileName)
+                </dt>
+                <dd class="col-sm-9">
+                    @Html.DisplayFor(model => model.Scan.ATFileName)
+                </dd>
+
+                <dt class="col-sm-3 text-muted fw-semibold">
+                    <i class="bi bi-file-earmark-code me-1"></i>
+                    @Html.DisplayNameFor(model => model.Scan.ATFileType)
+                </dt>
+                <dd class="col-sm-9">
+                    @Html.DisplayFor(model => model.Scan.ATFileType)
+                </dd>
+            </dl>
+        </div>
+    </div>
+</form>

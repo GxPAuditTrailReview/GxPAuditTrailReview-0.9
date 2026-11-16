@@ -1,0 +1,164 @@
+﻿@page
+@model AuditTrailReview.WebApp.Pages.Scan.PreviewModel
+
+@using AuditTrailReview.Engine
+@{
+    ViewData["Title"] = "Preview Scan";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Scans", "/Scan/Index"), new BreadcrumbItem("Preview") })" />
+<hr />
+
+<div class="row g-4 justify-content-center">
+
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-primary text-white d-flex align-items-center gap-2 py-3">
+                <i class="bi bi-eye fs-5"></i>
+                <span class="fw-semibold">Upload File</span>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="previewForm">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div id="fileTypeWarning" class="alert alert-warning d-none d-flex align-items-center gap-2 mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+                        <span>
+                            Unsupported file type. Please upload a <strong>.csv</strong>,
+                            <strong>.xml</strong>, or <strong>.json</strong> file.
+                        </span>
+                    </div>
+
+                    <label for="previewFileInput"
+                           class="d-flex flex-column align-items-center justify-content-center gap-2 rounded border border-2 border-primary border-opacity-25 p-5 mb-3 text-center bg-light w-100"
+                           id="dropZone">
+                        <i class="bi bi-file-earmark-arrow-up text-primary fs-1"></i>
+                        <span class="fw-semibold text-dark">Click to browse or drag &amp; drop</span>
+                        <small class="text-muted" id="fileNameLabel">No file selected</small>
+                        <input type="file" id="previewFileInput" name="CsvFile"
+                               class="d-none" accept=".csv,.xml,.json" />
+                    </label>
+
+                    <div class="d-flex gap-2 flex-wrap mb-4">
+                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2">
+                            <i class="bi bi-filetype-csv me-1"></i>.csv
+                        </span>
+                        <span class="badge rounded-pill bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 px-3 py-2">
+                            <i class="bi bi-filetype-xml me-1"></i>.xml
+                        </span>
+                        <span class="badge rounded-pill bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-3 py-2">
+                            <i class="bi bi-filetype-json me-1"></i>.json
+                        </span>
+                    </div>
+
+                    <div class="d-grid">
+                        <button class="btn btn-primary btn-lg" type="submit" id="previewBtn" disabled>
+                            <i class="bi bi-eye me-2"></i>Preview
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@if (Model.Headers.Any())
+{
+    <h2 class="mt-4 mb-3">File preview</h2>
+
+    <div class="table-responsive" style="max-height:70vh;">
+        <table class="table table-bordered table-hover table-striped sortable filterable">
+            <thead class="table-primary">
+                <tr>
+                    @for (int i = 0; i < Model.Headers.Count; i++)
+                    {
+                        <th scope="col" class="text-nowrap sortable" data-col-index="@i" role="button" aria-sort="none" title="Sort by @Model.Headers[i]">
+                            @Model.Headers[i]
+                            <span class="sort-indicator ms-2"></span>
+                        </th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        @foreach (var header in Model.Headers)
+                        {
+                            <td class="text-nowrap text-truncate"
+                                style="max-width:180px;"
+                                title="@row.GetValueOrDefault(header)">
+                                @row.GetValueOrDefault(header)
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        const ALLOWED = ['.csv', '.xml', '.json'];
+
+        const input   = document.getElementById('previewFileInput');
+        const label   = document.getElementById('fileNameLabel');
+        const btn     = document.getElementById('previewBtn');
+        const zone    = document.getElementById('dropZone');
+        const warning = document.getElementById('fileTypeWarning');
+
+        function getExtension(filename) {
+            return filename.slice(filename.lastIndexOf('.')).toLowerCase();
+        }
+
+        function applyFile(file) {
+            const ext = getExtension(file.name);
+            const valid = ALLOWED.includes(ext);
+
+            warning.classList.toggle('d-none', valid);
+            label.textContent = file.name;
+            btn.disabled = !valid;
+
+            zone.classList.remove('bg-primary', 'bg-danger', 'bg-opacity-10', 'bg-opacity-25');
+            zone.classList.add('bg-light');
+            if (!valid) {
+                zone.classList.add('bg-danger', 'bg-opacity-10');
+            }
+        }
+
+        function clearFile() {
+            warning.classList.add('d-none');
+            label.textContent = 'No file selected';
+            btn.disabled = true;
+            zone.classList.remove('bg-primary', 'bg-danger', 'bg-opacity-10', 'bg-opacity-25');
+            zone.classList.add('bg-light');
+        }
+
+        input.addEventListener('change', () => {
+            if (input.files.length === 0) { clearFile(); return; }
+            applyFile(input.files[0]);
+        });
+
+        zone.addEventListener('dragover', e => {
+            e.preventDefault();
+            zone.classList.remove('bg-light');
+            zone.classList.add('bg-primary', 'bg-opacity-25');
+        });
+
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('bg-primary', 'bg-opacity-25', 'bg-opacity-10');
+            zone.classList.add('bg-light');
+        });
+
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.classList.remove('bg-opacity-25');
+            if (e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                applyFile(e.dataTransfer.files[0]);
+            }
+        });
+    </script>
+}

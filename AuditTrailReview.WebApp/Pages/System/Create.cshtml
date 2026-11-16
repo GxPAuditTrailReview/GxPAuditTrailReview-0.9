@@ -1,0 +1,98 @@
+@page
+@model AuditTrailReview.WebApp.Pages.System.CreateModel
+
+@{
+    ViewData["Title"] = "New System";
+}
+
+<partial name="_Breadcrumb" model="@(new[] { new BreadcrumbItem("Systems", "/System/Index"), new BreadcrumbItem("New system") })" />
+
+<form method="post">
+    <div class="d-flex justify-content-start align-items-center gap-2 mb-3">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Create System
+        </button>
+        <a asp-page="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
+    </div>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger py-2" role="alert">
+            <div asp-validation-summary="ModelOnly"></div>
+        </div>
+    }
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex align-items-center">
+            <i class="bi bi-hdd-network fs-5 me-2"></i>
+            <h5 class="mb-0">Register a New System</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-4">
+                Add a system to the registry so scans can be linked back to it and shown throughout the app.
+            </p>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="SystemATRInfo.SystemPrefixID" class="form-label fw-semibold">
+                        System ID <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                        <input asp-for="SystemATRInfo.SystemPrefixID" class="form-control" placeholder="e.g. SYS3" autofocus />
+                    </div>
+                    <div class="form-text">A short, unique identifier for this system (at least 3 characters).</div>
+                    <span asp-validation-for="SystemATRInfo.SystemPrefixID" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label asp-for="SystemATRInfo.SystemName" class="form-label fw-semibold">
+                        System Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-hdd-network"></i></span>
+                        <input asp-for="SystemATRInfo.SystemName" class="form-control" placeholder="e.g. Warehouse ERP" />
+                    </div>
+                    <div class="form-text">The full, descriptive name reviewers will recognize (at least 5 characters).</div>
+                    <span asp-validation-for="SystemATRInfo.SystemName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label asp-for="SystemATRInfo.SystemTypeID" class="form-label fw-semibold">System Type</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-tags"></i></span>
+                        <select asp-for="SystemATRInfo.SystemTypeID" asp-items="Model.SystemTypeList" class="form-select">
+                            <option value="">-- Select System Type (optional) --</option>
+                        </select>
+                    </div>
+                    @if (!Model.SystemTypeList.Any())
+                    {
+                        if (User.IsInRole("Admin") || User.IsInRole("Super User"))
+                        {
+                            <div class="form-text">
+                                No system types exist yet. <a asp-page="/ConfigPanel/SystemType/Create">Create one</a> to categorize this system.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="form-text">No system types exist yet -- ask an administrator to add one.</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="form-text">Optional -- helps group and filter systems for reporting.</div>
+                    }
+                    <span asp-validation-for="SystemATRInfo.SystemTypeID" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

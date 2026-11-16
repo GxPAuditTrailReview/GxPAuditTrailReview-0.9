@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>0d52109c-d75a-4824-bba0-95cc8b819933</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" />
+    <PackageReference Include="Microsoft.Data.SqlClient.Extensions.Azure" Version="7.1.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.0" />
+    <!-- Only used when Database:Provider=Postgres (docker-compose.postgres.yml). -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.23.0" />
+
+    <!-- Structured, DB-persisted application logging (Path to v1.0.md item 29, Integration Hub
+         API follow-up; DB-only as of the Fortieth follow-up). Writes to the
+         same dbo.ApplicationLog table as AuditTrailReview.WebApp and
+         AuditTrailReview.IntegrationHub.WorkerService (see ATR 0.9's schema addendum for the
+         Application column that tells all three components' rows apart). This is an ASP.NET
+         Core app built on WebApplicationBuilder, same as the WebApp, so it uses the same
+         Serilog.AspNetCore meta-package and builder.Host.UseSerilog(...) pattern rather than
+         the Worker Service's plain-Generic-Host Services.AddSerilog(...) wiring. The local
+         rolling "Logs/apperror-*.log" file sink and Serilog.Sinks.File package were removed;
+         events now go to dbo.ApplicationLog only. Versions below
+         are believed current but have NOT been restored/build-verified in this session (no
+         dotnet toolchain available here); let NuGet resolve/update to the actual latest
+         compatible versions on first restore. -->
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.1" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Sinks.MSSqlServer" Version="10.0.0" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AuditTrailReview.Database\AuditTrailReview.Database.csproj" />
+    <ProjectReference Include="..\AuditTrailReview.Engine\AuditTrailReview.Engine.csproj" />
+  </ItemGroup>
+
+</Project>

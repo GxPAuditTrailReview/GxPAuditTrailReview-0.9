@@ -1,0 +1,206 @@
+# Self-contained way to try the WebApp against a real PostgreSQL server (schema created from the
+# EF Core model at startup -- see appsettings.Postgres.json and Program.cs), as an alternative to
+# docker/docker-compose.sqlite.yml's embedded-file flavor. This is a separate flavor from the supported
+# SQL-Server-backed deployment (ADR-0002/ADR-0004, Installation Manual.md/Technical Manual.md) --
+# not a replacement for it, and not intended for real GxP use.
+#
+# Includes the Integration Hub Worker Service (the "worker" service below), so large uploads
+# (ScanUploadJob Tier.Worker rows) are drained from the same Postgres database and the FTP
+# polling path can be exercised too, and the Integration Hub API (the "api" service, port 8081,
+# API-key authenticated -- keys are generated from AdminPanel -> Settings -> API in the webapp,
+# not configured here; there is no default local-test key) so API uploads can be tested.
+# ScanUploadJobProcessor streams the stored
+# file from Postgres (set-based status updates + a SequentialAccess bytea read), but the rest of
+# the pipeline still holds a whole file in memory while it is parsed, so a multi-million-row
+# file needs a lot of RAM -- give Docker/WSL2 enough memory (see .wslconfig) or use SQL Server.
+# Not a performance benchmark.
+#
+# Also includes AuditTrailReview.McpServer (the "mcp" service, port 8082), the read-only MCP
+# server for QA data exploration (ADR-0010). /mcp requires a key generated from AdminPanel ->
+# Settings -> MCP in the webapp (header X-Api-Key or Authorization: Bearer) -- a separate key
+# pool from the "api" service's own tab, and there is no default local-test key; there is still
+# no rate limiting. Point an
+# MCP client at http://<host>:8082/mcp (plain HTTP; there's no TLS termination here -- put this
+# behind a reverse proxy with a real certificate if it needs to be reachable beyond that).
+#
+# FTP: no FTP server is bundled. FTP ingestion is OFF by default; to test that path, enable it
+# and enter a reachable server and an existing system in the web app (Settings > FTP).
+#
+# Usage:
+#   docker compose --project-directory . -f docker/docker-compose.postgres.yml up --build
+#   Then open http://localhost:8080 and sign in with the SeedAccount credentials below.
+# Run from the repository root with --project-directory . so the build context (.), .env and
+# ./backups resolve against the root, e.g.: docker compose --project-directory . -f docker/<this file> up --build
+# `name:` keeps the project (and so the volume names) identical to when this file lived at the root.
+name: gxpaudittrail
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: gxpaudittrail
+      POSTGRES_USER: gxpaudittrail
+      # Change this -- and the matching password in webapp's ConnectionStrings__DefaultConnection
+      # below -- before using this for anything beyond local testing.
+      POSTGRES_PASSWORD: Choose-A-Strong-Password1!
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Published to the host so a local GUI tool (pgAdmin, DBeaver, Azure Data Studio, etc.) or
+      # `psql`/`pg_dump` can connect directly -- connect to localhost:5432 with the credentials
+      # above. Not needed by the webapp itself, which reaches postgres over the internal compose
+      # network by service name regardless of this mapping.
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gxpaudittrail -d gxpaudittrail"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  webapp:
+    build:
+      context: .
+      dockerfile: AuditTrailReview.WebApp/Dockerfile
+    depends_on:
+      postgres:
+        # Postgres takes a moment to initialize on first run -- without this, the webapp would
+        # start trying to connect before the server is accepting connections.
+        condition: service_healthy
+    # Unlike the other three services below, this was missing until it was the cause of a
+    # confusing "webapp silently isn't there" symptom: api/worker/mcp's own `depends_on:
+    # condition: service_started` only waits for webapp to have started once, so if webapp
+    # later crashed (e.g. on a stale Postgres volume missing a table EnsureCreated never
+    # re-creates), everything else kept running while webapp quietly stayed dead with no
+    # restart attempt.
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Postgres
+      ASPNETCORE_URLS: http://+:8080
+      # Reverse proxy/tunnel whose X-Forwarded-For/-Proto the webapp may trust (CIDR, e.g. 172.16.0.0/12).
+      # Empty = loopback only. See AuditTrailReview.Docs/CICD/Run docker compose on VPS.md section 6.
+      ForwardedHeaders__KnownNetworks__0: ${TRUSTED_PROXY_NETWORK:-}
+      # Overrides appsettings.Postgres.json's own (password-less) connection string wholesale, so
+      # the real password lives here, not in a tracked file. Must match postgres's own
+      # POSTGRES_PASSWORD above.
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=gxpaudittrail;Username=gxpaudittrail;Password=Choose-A-Strong-Password1!;SSL Mode=Disable"
+      # First-login credentials, seeded once against an empty user table -- change these, or
+      # override via `docker compose --project-directory . -f docker/docker-compose.postgres.yml run -e SeedAccount__Password=...`.
+      SeedAccount__Email: admin@example.com
+      SeedAccount__Password: Choose-A-Strong-Password1!
+      # Master key for AiSettings.ApiKeyEncrypted and EmailSettings.PasswordEncrypted
+      # (ApiKeyProtector, AES-256-GCM). The placeholder in appsettings.json
+      # ("CHANGE_ME_32_BYTE_BASE64_KEY") is not valid base64/32 bytes, so saving an OpenAI key
+      # from the AI Analysis tab or an SMTP password from the Email tab (both under Admin Panel ->
+      # Application Settings) throws InvalidOperationException/500 until a real value reaches
+      # this process. Deliberately NOT a hardcoded value here (unlike the other placeholders in
+      # this file) -- a working AES-256 key is indistinguishable from a real leaked secret by
+      # anything scanning this repository, so it comes from your own untracked .env file or the
+      # environment instead; see .env.example and Run docker compose on VPS.md section 3. Empty
+      # by default so `docker compose up` doesn't require it just to try the flavor without AI
+      # analysis or saving SMTP credentials here.
+      Security__EncryptionKey: ${ENCRYPTION_KEY:-}
+      # Optional: OpenAI__ApiKey / SmtpSettings__* can be added here too -- both are optional in
+      # this flavor (manual upload works without AI analysis; SMTP only backs "Send Credentials").
+    ports:
+      - "8080:8080"
+
+  api:
+    build:
+      context: .
+      dockerfile: AuditTrailReview.IntegrationHub.API/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # The webapp creates the schema (EnsureCreated) at its startup; the API's own startup
+      # recovery query would fail if it ran before that, so wait for the webapp to be up.
+      webapp:
+        condition: service_started
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Postgres
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=gxpaudittrail;Username=gxpaudittrail;Password=Choose-A-Strong-Password1!;SSL Mode=Disable"
+      # Must match webapp's own Security__EncryptionKey above exactly (same .env variable, so
+      # they're always in sync) -- this process decrypts dbo.ApiKeyCredential rows to validate
+      # the X-Api-Key header. There's no default local-test key any more: sign in to the webapp
+      # and generate one from AdminPanel -> Settings -> API before this service will accept any
+      # request.
+      Security__EncryptionKey: ${ENCRYPTION_KEY:-}
+    ports:
+      - "8081:8080"
+
+  mcp:
+    build:
+      context: .
+      dockerfile: AuditTrailReview.McpServer/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # The webapp creates the schema (EnsureCreated) at its startup; this service has no schema
+      # creation of its own.
+      webapp:
+        condition: service_started
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Postgres
+      ASPNETCORE_URLS: http://+:8080
+      # Must match webapp's own Security__EncryptionKey above exactly (same .env variable, so
+      # they're always in sync) -- this process decrypts dbo.McpApiKeyCredential rows to validate
+      # the X-Api-Key header (or Bearer token). There's no default local-test key any more: sign
+      # in to the webapp and generate one from AdminPanel -> Settings -> MCP before this service
+      # will accept any request. A key generated for the "api" service's own tab will NOT work
+      # here -- the two pools are deliberately separate.
+      Security__EncryptionKey: ${ENCRYPTION_KEY:-}
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=gxpaudittrail;Username=gxpaudittrail;Password=Choose-A-Strong-Password1!;SSL Mode=Disable"
+    ports:
+      - "8082:8080"
+
+  worker:
+    build:
+      context: .
+      dockerfile: AuditTrailReview.IntegrationHub.WorkerService/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # The webapp creates the schema (EnsureCreated) at its startup; the worker has no schema
+      # creation of its own. Its poll loop tolerates tables not existing yet and retries.
+      webapp:
+        condition: service_started
+    restart: unless-stopped
+    environment:
+      DOTNET_ENVIRONMENT: Postgres
+      # Must match postgres's POSTGRES_PASSWORD above.
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=gxpaudittrail;Username=gxpaudittrail;Password=Choose-A-Strong-Password1!;SSL Mode=Disable"
+      # Must match webapp's own Security__EncryptionKey above exactly (same .env variable, so
+      # they're always in sync) -- this process decrypts the same AiSettings.ApiKeyEncrypted
+      # value webapp encrypted, for FTP/API-ingested scans' AI analysis (ApiKeyProtector).
+      Security__EncryptionKey: ${ENCRYPTION_KEY:-}
+
+  # Nightly pg_dump of the database into ./backups/daily (gzipped SQL). Runs every day at 03:00
+  # (TZ below, so local time rather than the container's default UTC) and deletes dumps older
+  # than 14 days. Weekly/monthly retention is set to 0 because the image would otherwise also
+  # keep 4 weeks + 6 months of extra dumps. Copy ./backups off the host (scp/rsync) -- a backup
+  # that lives on the same disk as the database does not survive losing that disk.
+  # Restore: gunzip -c backups/daily/<file>.sql.gz | docker compose --project-directory . -f docker/docker-compose.postgres.yml exec -T postgres psql -U gxpaudittrail -d gxpaudittrail
+  # Run one immediately: docker compose --project-directory . -f docker/docker-compose.postgres.yml exec backup /backup.sh
+  backup:
+    image: prodrigestivill/postgres-backup-local:16
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: gxpaudittrail
+      POSTGRES_USER: gxpaudittrail
+      # Must match postgres's POSTGRES_PASSWORD above.
+      POSTGRES_PASSWORD: Choose-A-Strong-Password1!
+      SCHEDULE: "0 3 * * *"
+      TZ: Europe/Warsaw
+      BACKUP_KEEP_DAYS: "14"
+      BACKUP_KEEP_WEEKS: "0"
+      BACKUP_KEEP_MONTHS: "0"
+    volumes:
+      - ./backups:/backups
+
+volumes:
+  postgres_data:

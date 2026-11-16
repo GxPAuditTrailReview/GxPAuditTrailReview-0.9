@@ -1,0 +1,136 @@
+# Runs the Playwright UI tests (AuditTrailReview.UIPlaywrightTest) against an ALREADY RUNNING
+# environment. Manual pipeline: you supply the target URL and the login when you click "Run".
+#
+# - The tests do not start a WebApp themselves; they drive a browser against baseUrl.
+# - The environment must be reachable from the build agent (public URL for Microsoft-hosted agents).
+# - The tests create data (they upload a small CSV and produce a scan). Do not point this at
+#   production.
+# - NOTE: Azure DevOps runtime parameters are NOT secret. The password is masked in the logs, but
+#   it is visible in the run's "Parameters" view. See AuditTrailReview.Docs/CICD/Azure Pipelines.md
+#   for the secret-variable alternative.
+
+trigger: none
+pr: none
+
+name: 'UI tests $(Date:yyyyMMdd)$(Rev:.r)'
+
+parameters:
+- name: baseUrl
+  displayName: 'Environment URL (e.g. https://atr-test.example.com)'
+  type: string
+- name: loginEmail
+  displayName: 'Login (email)'
+  type: string
+- name: loginPassword
+  displayName: 'Password (visible in run parameters, masked in logs)'
+  type: string
+- name: testFilter
+  displayName: 'Optional dotnet test --filter expression (empty = all UI tests)'
+  type: string
+  default: ' '
+- name: agentPool
+  displayName: 'Agent pool'
+  type: string
+  default: 'Azure Pipelines'
+  values:
+  - 'Azure Pipelines'
+  - 'Self-hosted (set selfHostedPoolName)'
+- name: selfHostedPoolName
+  displayName: 'Self-hosted pool name (only when the environment is private)'
+  type: string
+  default: ' '
+
+variables:
+  buildConfiguration: 'Release'
+  uiProject: 'AuditTrailReview.UIPlaywrightTest/AuditTrailReview.UIPlaywrightTest.csproj'
+  resultsDir: '$(Agent.TempDirectory)/UiTestResults'
+
+jobs:
+- job: UiTests
+  displayName: 'Playwright UI tests'
+  timeoutInMinutes: 60
+  # Template expressions are not allowed in the top-level `pool:`, but they are in a job's pool.
+  pool:
+    ${{ if eq(parameters.agentPool, 'Azure Pipelines') }}:
+      vmImage: windows-latest
+    ${{ else }}:
+      name: ${{ parameters.selfHostedPoolName }}
+  steps:
+
+  - task: UseDotNet@2
+    displayName: 'Use .NET 10 SDK'
+    inputs:
+      packageType: sdk
+      version: '10.0.x'
+
+  # Secrets are passed through env: only. Nothing is echoed.
+  - powershell: |
+      $url = $env:ATR_URL.Trim()
+      if ([string]::IsNullOrWhiteSpace($url) -or $url -notmatch '^https?://') {
+        Write-Error "baseUrl must be a full http(s) URL, got '$url'."
+        exit 1
+      }
+      if ([string]::IsNullOrWhiteSpace($env:ATR_EMAIL) -or [string]::IsNullOrWhiteSpace($env:ATR_PASSWORD)) {
+        # The login-dependent tests would otherwise end as 'Inconclusive' (skipped) and look green.
+        Write-Error 'loginEmail and loginPassword are required.'
+        exit 1
+      }
+      Write-Host "##vso[task.setsecret]$($env:ATR_PASSWORD)"
+      Write-Host "##vso[build.updatebuildnumber]UI tests - $(([uri]$url).Host) - $(Build.BuildId)"
+      Write-Host "Target: $url  (login: $($env:ATR_EMAIL))"
+    displayName: 'Validate parameters'
+    env:
+      ATR_URL: ${{ parameters.baseUrl }}
+      ATR_EMAIL: ${{ parameters.loginEmail }}
+      ATR_PASSWORD: ${{ parameters.loginPassword }}
+
+  - powershell: |
+      $url = $env:ATR_URL.Trim()
+      $ok = $false
+      for ($i = 1; $i -le 12 -and -not $ok; $i++) {
+        try {
+          $r = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 20 -MaximumRedirection 5
+          Write-Host "Attempt $i : HTTP $($r.StatusCode)"
+          $ok = $true
+        } catch {
+          # A login redirect or 401/403 still proves the site is up; only network errors / 5xx retry.
+          $resp = $_.Exception.Response
+          if ($resp -and [int]$resp.StatusCode -lt 500) { Write-Host "Attempt $i : HTTP $([int]$resp.StatusCode)"; $ok = $true }
+          else { Write-Host "Attempt $i failed: $($_.Exception.Message)"; Start-Sleep -Seconds 10 }
+        }
+      }
+      if (-not $ok) { Write-Error "Environment $url is not reachable from this agent after 12 attempts."; exit 1 }
+    displayName: 'Check environment is reachable'
+    env:
+      ATR_URL: ${{ parameters.baseUrl }}
+
+  - script: dotnet restore $(uiProject)
+    displayName: 'Restore'
+
+  - script: dotnet build $(uiProject) --configuration $(buildConfiguration) --no-restore
+    displayName: 'Build UI tests'
+
+  - powershell: |
+      $testArgs = @('test', '$(uiProject)', '--configuration', '$(buildConfiguration)', '--no-build',
+                    '--logger', 'trx', '--results-directory', '$(resultsDir)')
+      $filter = $env:ATR_FILTER.Trim()
+      if ($filter) { $testArgs += @('--filter', $filter) }
+      & dotnet @testArgs
+      exit $LASTEXITCODE
+    displayName: 'Run Playwright UI tests'
+    env:
+      ATR_FILTER: ${{ parameters.testFilter }}
+      ATR_PLAYWRIGHT_BASE_URL: ${{ parameters.baseUrl }}
+      ATR_PLAYWRIGHT_EMAIL: ${{ parameters.loginEmail }}
+      ATR_PLAYWRIGHT_PASSWORD: ${{ parameters.loginPassword }}
+      ATR_PLAYWRIGHT_HEADLESS: 'true'
+      ATR_PLAYWRIGHT_BROWSER_CHANNEL: 'msedge'
+
+  - task: PublishTestResults@2
+    displayName: 'Publish UI test results'
+    condition: always()
+    inputs:
+      testResultsFormat: VSTest
+      testResultsFiles: '$(resultsDir)/*.trx'
+      testRunTitle: 'Playwright UI tests'
+      failTaskOnFailedTests: true
